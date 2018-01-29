@@ -1,32 +1,40 @@
-# Prerequisites
-*.d
+*.diff
+*.orig
+*.patch
+*.rej
 
-# Compiled Object files
-*.slo
-*.lo
 *.o
-*.obj
+*.pyc
+*.pyo
 
-# Precompiled Headers
-*.gch
-*.pch
+*.cwnd
+*.dat
+*.log
+*.mob
+*.pcap
+*.plt
+*.routes
+*.tr
+[D|U]l[A-Z][a-z]*Stats.txt
+seventh-packet-byte-count.png
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+\#*#
+~*
 
-# Fortran module files
-*.mod
-*.smod
+testpy-output
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+bindings/python/pybindgen/
 
-# Executables
-*.exe
-*.out
-*.app
+ms_print.*
+massif.*
+coverity
+TAGS
+
+.lock-waf_*_build
+.waf*
+
+build-dir/
+build/
+/.cproject
+/.project
+
