@@ -1,0 +1,15 @@
+.hg/
+\.rej$
+\.orig$
+\.o$
+~$
+^build
+^include/openflow/private
+^\.lock-wscript
+.*\.py[co]$
+ms_print.*
+massif.*
+\.patch$
+\.diff$
+\.tr$
+\#[^\#/]+\#$
