@@ -77,9 +77,9 @@ main (int argc, char *argv[])
   lte.AddX2Interface(Ptr<Node> enbNode.Get(17), Ptr<Node> enbNode.Get(18));
 
   lte.SetEnbAntennaModelType ("IsotropicAntennaModel");
-//  lte.SetFadingModel("");
-//  lte.SetHandoverAlgorithmType("");
-
+  lte.SetFadingModel("TraceFadingLossModel");
+  lte.SetHandoverAlgorithmType("A3RsrpHandoverAlgorithm");
+  lte.SetSpectrumChannelType("SingleModelSpectrumChannel");
 
   enbNodes = lte.InstallEnbDevice (enbNode);
   ueDevices =lte.InstallUeDevice (Nodes);
