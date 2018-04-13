@@ -42,14 +42,57 @@ set val(ifqlen)       50                       ;# max packet in ifq
 set opt(nn)           50                        ;# number of mobilenodes
 
 set val(rp)           AODV                     ;# ad-hoc routing protocol 
+set opt(tr)	      out.tr			;# tracefile
+set opt(out)	      outnam.nam		;# nam outputfile
 
 # create instance of simulator
 set ns_    [new Simulator]
 $ns_ use-newtrace 
 
 
+###
+
+proc usage { argv0 }  {
+        puts "Usage: $argv0"
+        puts "\tmandatory arguments:"
+        puts "\t\t\[-x MAXX\] \[-y MAXY\]"
+        puts "\toptional arguments:"
+        puts "\t\t\[-cp conn pattern\] \[-sc scenario\] \[-nn nodes\]"
+        puts "\t\t\[-seed seed\] \[-stop sec\] \[-out namOutput\] [-tr tracefile\]\n"
+}
+
+proc getopt {argc argv} {
+        global opt
+        lappend optlist cp nn seed sc stop tr x y
+
+        for {set i 0} {$i < $argc} {incr i} {
+                set arg [lindex $argv $i]
+                if {[string range $arg 0 0] != "-"} continue
+
+                set name [string range $arg 1 end]
+                set opt($name) [lindex $argv [expr $i+1]]
+        }
+}
+
+
+getopt $argc $argv
+
+
+getopt $argc $argv
+
+if { $opt(x) == 0 || $opt(y) == 0 } {
+        usage $argv0
+        exit 1
+}
+
+if {$opt(seed) > 0} {
+        puts "Seeding Random number generator with $opt(seed)\n"
+        ns-random $opt(seed)
+}
 # setup trace support
-set tracefd     [open test.tr w]
+set namf [open $opt(out) w]
+set tracefd     [open $opt(tr) w]
+$ns_ namtrace-all-wireless $namf $opt(x) $opt(y)
 $ns_ trace-all $tracefd  
 
 # create topology
@@ -81,6 +124,13 @@ for {set i 0} {$i < $opt(nn) } {incr i} {
 } 
 
 
+for {set i 0} {$i < $opt(nn)} {incr i} {
+    $node_($i) namattach $namf
+# 20 defines the node size in nam, must adjust it according to your scenario
+   $ns_ initial_node_pos $node_($i) 50
+}
+
+
 # 
 # Define node movement model
 #
@@ -108,6 +158,7 @@ $ns_ at  $opt(stop).000000001 "puts \"NS EXITING...\" ; $ns_ halt"
 proc stop {} {
     global ns_ tracefd
     close $tracefd
+    close $namf
 }
 puts "Starting Simulation..."
 $ns_ run
