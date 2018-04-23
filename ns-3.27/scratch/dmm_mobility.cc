@@ -17,10 +17,12 @@
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/lte-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/eps-bearer.h"
 #include "ns3/lte-helper.h"
+#include "ns3/epc-helper.h"
 #include "ns3/lte-net-device.h"
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-handover-algorithm.h"
@@ -47,45 +49,50 @@ main (int argc, char *argv[])
   NetDeviceContainer ueDevices;
 
   NodeContainer enbNode;
-  enbNode.create(18);
+  enbNode.Create(18);
 
   NetDeviceContainer enbNodes;
 
 
 //creates the lte framework
-  LteHelper lte;
-  lte.ActivateDataRadioBearer(ueDevices,EpsBearer bearer);
+  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
+  lteHelper->SetEpcHelper (epcHelper);
+  lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler"); // XXX/TODO: what is this?
+
+
+  EpsBearer bearer;
+  lteHelper->ActivateDataRadioBearer(ueDevices,bearer);
 
 
 //Based on the topology in the paper, we connect each enodebs in each network
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(1), Ptr<Node> enbNode.Get(2));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(2), Ptr<Node> enbNode.Get(3));
+  lteHelper->AddX2Interface(enbNode.Get(1),  enbNode.Get(2));
+  lteHelper->AddX2Interface(enbNode.Get(2),  enbNode.Get(3));
 
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(4), Ptr<Node> enbNode.Get(5));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(5), Ptr<Node> enbNode.Get(6));
+  lteHelper->AddX2Interface(enbNode.Get(4),  enbNode.Get(5));
+  lteHelper->AddX2Interface(enbNode.Get(5),  enbNode.Get(6));
 
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(7), Ptr<Node> enbNode.Get(8));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(8), Ptr<Node> enbNode.Get(9));
+  lteHelper->AddX2Interface(enbNode.Get(7),  enbNode.Get(8));
+  lteHelper->AddX2Interface(enbNode.Get(8),  enbNode.Get(9));
 
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(10), Ptr<Node> enbNode.Get(11));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(11), Ptr<Node> enbNode.Get(12));
+  lteHelper->AddX2Interface(enbNode.Get(10), enbNode.Get(11));
+  lteHelper->AddX2Interface(enbNode.Get(11), enbNode.Get(12));
 
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(13), Ptr<Node> enbNode.Get(14));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(14), Ptr<Node> enbNode.Get(15));
+  lteHelper->AddX2Interface(enbNode.Get(13), enbNode.Get(14));
+  lteHelper->AddX2Interface(enbNode.Get(14), enbNode.Get(15));
 
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(16), Ptr<Node> enbNode.Get(17));
-  lte.AddX2Interface(Ptr<Node> enbNode.Get(17), Ptr<Node> enbNode.Get(18));
+  lteHelper->AddX2Interface(enbNode.Get(16), enbNode.Get(17));
+  lteHelper->AddX2Interface(enbNode.Get(17), enbNode.Get(18));
 
-  lte.SetEnbAntennaModelType ("IsotropicAntennaModel");
+  lteHelper->SetEnbAntennaModelType ("IsotropicAntennaModel");
 //  lte.SetFadingModel("");
 //  lte.SetHandoverAlgorithmType("");
 
 
-  enbNodes = lte.InstallEnbDevice (enbNode);
-  ueDevices =lte.InstallUeDevice (Nodes);
+  enbNodes = lteHelper->InstallEnbDevice (enbNode);
+  ueDevices = lteHelper->InstallUeDevice (nodes);
 
-  lte.Attach(ueDevices);
-  lte.SetEpcHelper(Ptr<EpcHelper> h); 	
+  lteHelper->Attach(ueDevices);
 
   InternetStackHelper stack;
   stack.Install (nodes);
