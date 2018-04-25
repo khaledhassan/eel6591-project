@@ -35,32 +35,71 @@ NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 int
 main (int argc, char *argv[])
 {
-  CommandLine cmd;
-  cmd.Parse (argc, argv);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
+  // change some default attributes so that they are reasonable for
+  // this scenario, but do this before processing command line
+  // arguments, so that the user is allowed to override these settings
+  Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (10)));
+  Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
+
+  // Command line arguments
+  CommandLine cmd;
+
+  double speed = 20;       // m/s
+  double enbTxPowerDbm = 46.0;
+  // XXX/TODO: // double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+
+  cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
+  cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (defalut = 46.0)", enbTxPowerDbm);
+  // XXX/TODO: // cmd.AddValue ("simTime", "Total duration of the simulation (in seconds)", simTime);
+
+  cmd.Parse (argc, argv);
+
+  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
+  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
+  lteHelper->SetEpcHelper (epcHelper);
+  lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
+
+  //  lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
+  //  lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
+  //                                            DoubleValue (3.0));
+  //  lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
+  //                                            TimeValue (MilliSeconds (256)));
+
+  Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
+
+
 //creates 20 nodes we can use as mobile nodes
   NodeContainer ueNodes;
   ueNodes.Create (20);
-  NetDeviceContainer ueDevices;
+  NetDeviceContainer ueLteDevs;
+  Ipv4InterfaceContainer ueIpIfaces;
 
 //create 18 eNodeBs
   NodeContainer enbNodes;
   enbNodes.Create(18);
-  NetDeviceContainer enbDevices;
-
-//creates the lte framework
-  Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
-  Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
-  lteHelper->SetEpcHelper (epcHelper);
-  lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler"); // XXX/TODO: what is this?
+  NetDeviceContainer enbLteDevs;
 
 
+
+//create Internet and IPv4 addresses
+  InternetStackHelper internet;
+  internet.Install(ueNodes);
+  internet.Install(enbNodes);
+  Ipv4AddressHelper ipAddresses;
+  ipAddresses.SetBase ("10.10.10.0", "255.255.255.0");
+
+//add UEs and eNBs to the LTE network
+  //Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
+  enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+  ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
   EpsBearer bearer;
-  lteHelper->ActivateDataRadioBearer(ueDevices,bearer);
+  lteHelper->ActivateDataRadioBearer(ueLteDevs,bearer);
 
 
 //Based on the topology in the paper, we connect each enodebs in each network
@@ -78,8 +117,8 @@ main (int argc, char *argv[])
 
   lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
   lteHelper->AddX2Interface(enbNodes.Get(14), enbNodes.Get(15));
-
   lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+
   lteHelper->AddX2Interface(enbNodes.Get(17), enbNodes.Get(18));
 
   lteHelper->SetEnbAntennaModelType ("IsotropicAntennaModel");
@@ -87,13 +126,10 @@ main (int argc, char *argv[])
 //  lte.SetHandoverAlgorithmType("");
 
 
-  enbDevices = lteHelper->InstallEnbDevice (enbNodes);
-  ueDevices = lteHelper->InstallUeDevice (ueNodes);
+//assign UE IP addresses after the lteHelper is aware of the UE's InternetStack
+  ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
 
-  lteHelper->Attach(ueDevices);
-
-  InternetStackHelper stack;
-  stack.Install (ueNodes);
+  lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
 
   Simulator::Run ();
   Simulator::Destroy ();
