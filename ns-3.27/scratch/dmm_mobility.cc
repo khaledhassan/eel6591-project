@@ -36,6 +36,10 @@ NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 int
 main (int argc, char *argv[])
 {
+
+/***********************************************************
+ * Log level and coommand line parsing                     *
+ ***********************************************************/
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
   LogComponentEnable ("LteHelper", logLevel);
@@ -65,6 +69,10 @@ main (int argc, char *argv[])
 
   cmd.Parse (argc, argv);
 
+
+/***********************************************************
+ * Create LTE, EPC, and UE/eNB Nodes                       *
+ ***********************************************************/
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
@@ -91,15 +99,21 @@ main (int argc, char *argv[])
   NetDeviceContainer enbLteDevs;
 
 
-
-//create Internet and IPv4 addresses
+/***********************************************************
+ * Create Internet and IP addresses, to be assigned after  *
+ * nodes are added to the LTE network                      *
+ ***********************************************************/
   InternetStackHelper internet;
   internet.Install(ueNodes);
 //  internet.Install(enbNodes);
   Ipv4AddressHelper ipAddresses;
   ipAddresses.SetBase ("10.10.10.0", "255.255.255.0");
 
-//add UEs and eNBs to the LTE network
+
+/***********************************************************
+ * Add UEs and eNBs to the LTE network                     *
+ * Requires setting up mobility models for UEs and eNBs    *
+ ***********************************************************/
   // Install Mobility Model in eNB
   Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
   for (uint16_t i = 0; i < 18; i++)
@@ -131,6 +145,9 @@ main (int argc, char *argv[])
 //  lteHelper->ActivateDataRadioBearer(ueLteDevs,bearer);
 
 
+/***********************************************************
+ * Add X2 interfaces to eNBs                               *
+ ***********************************************************/
 //Based on the topology in the paper, we connect each enodebs in each network
   lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
   lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
@@ -152,14 +169,21 @@ main (int argc, char *argv[])
 
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
-//  lte.SetHandoverAlgorithmType("");
+//  lte.SetHandoverAlgorithmType(""); //TODO/XXX
 
 
+/***********************************************************
+ * Assign IP addresses to UEs and attach them to the LTE   *
+ * network                                                 *
+ ***********************************************************/
 //assign UE IP addresses after the lteHelper is aware of the UE's InternetStack
   ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
-
   lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
 
+
+/***********************************************************
+ * Run simulation                                          *
+ ***********************************************************/
   Simulator::Stop (Seconds (1));
   Simulator::Run ();
   Simulator::Destroy ();
