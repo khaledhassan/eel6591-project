@@ -18,6 +18,7 @@
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/lte-module.h"
+#include "ns3/mobility-module.h"
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/eps-bearer.h"
@@ -35,6 +36,10 @@ NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 int
 main (int argc, char *argv[])
 {
+  LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+
+  LogComponentEnable ("LteHelper", logLevel);
+  LogComponentEnable ("EpcHelper", logLevel);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
@@ -90,38 +95,62 @@ main (int argc, char *argv[])
 //create Internet and IPv4 addresses
   InternetStackHelper internet;
   internet.Install(ueNodes);
-  internet.Install(enbNodes);
+//  internet.Install(enbNodes);
   Ipv4AddressHelper ipAddresses;
   ipAddresses.SetBase ("10.10.10.0", "255.255.255.0");
 
 //add UEs and eNBs to the LTE network
-  //Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
+  // Install Mobility Model in eNB
+  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < 18; i++)
+    {
+      Vector enbPosition (0, 0, 0); // TODO/XXX: must fix this
+      enbPositionAlloc->Add (enbPosition);
+    }
+  MobilityHelper enbMobility;
+  enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  enbMobility.SetPositionAllocator (enbPositionAlloc);
+  enbMobility.Install (enbNodes);
+
+  // Install Mobility Model in UEs XXX/TODO: change this to real mobility model!
+  Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < 20; i++)
+    {
+      Vector uePosition (0, 0, 0); // TODO/XXX: must fix this
+      uePositionAlloc->Add (uePosition);
+    }
+  MobilityHelper ueMobility;
+  ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  ueMobility.SetPositionAllocator (uePositionAlloc);
+  ueMobility.Install (ueNodes);
+
+  Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
   enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
-  EpsBearer bearer;
-  lteHelper->ActivateDataRadioBearer(ueLteDevs,bearer);
+//  EpsBearer bearer;
+//  lteHelper->ActivateDataRadioBearer(ueLteDevs,bearer);
 
 
 //Based on the topology in the paper, we connect each enodebs in each network
+  lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
   lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
-  lteHelper->AddX2Interface(enbNodes.Get(2),  enbNodes.Get(3));
 
+  lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
   lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
-  lteHelper->AddX2Interface(enbNodes.Get(5),  enbNodes.Get(6));
 
+  lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
   lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
-  lteHelper->AddX2Interface(enbNodes.Get(8),  enbNodes.Get(9));
 
+  lteHelper->AddX2Interface(enbNodes.Get(9), enbNodes.Get(10));
   lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
-  lteHelper->AddX2Interface(enbNodes.Get(11), enbNodes.Get(12));
 
+  lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
   lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
-  lteHelper->AddX2Interface(enbNodes.Get(14), enbNodes.Get(15));
+
+  lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
   lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
 
-  lteHelper->AddX2Interface(enbNodes.Get(17), enbNodes.Get(18));
-
-  lteHelper->SetEnbAntennaModelType ("IsotropicAntennaModel");
+  lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
 //  lte.SetHandoverAlgorithmType("");
 
@@ -131,6 +160,7 @@ main (int argc, char *argv[])
 
   lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
 
+  Simulator::Stop (Seconds (1));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
