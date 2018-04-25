@@ -43,16 +43,14 @@ main (int argc, char *argv[])
   LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
 //creates 20 nodes we can use as mobile nodes
-  NodeContainer nodes;
-  nodes.Create (20);
-
+  NodeContainer ueNodes;
+  ueNodes.Create (20);
   NetDeviceContainer ueDevices;
 
-  NodeContainer enbNode;
-  enbNode.Create(18);
-
-  NetDeviceContainer enbNodes;
-
+//create 18 eNodeBs
+  NodeContainer enbNodes;
+  enbNodes.Create(18);
+  NetDeviceContainer enbDevices;
 
 //creates the lte framework
   Ptr<LteHelper> lteHelper = CreateObject<LteHelper> ();
@@ -66,36 +64,36 @@ main (int argc, char *argv[])
 
 
 //Based on the topology in the paper, we connect each enodebs in each network
-  lteHelper->AddX2Interface(enbNode.Get(1),  enbNode.Get(2));
-  lteHelper->AddX2Interface(enbNode.Get(2),  enbNode.Get(3));
+  lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
+  lteHelper->AddX2Interface(enbNodes.Get(2),  enbNodes.Get(3));
 
-  lteHelper->AddX2Interface(enbNode.Get(4),  enbNode.Get(5));
-  lteHelper->AddX2Interface(enbNode.Get(5),  enbNode.Get(6));
+  lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
+  lteHelper->AddX2Interface(enbNodes.Get(5),  enbNodes.Get(6));
 
-  lteHelper->AddX2Interface(enbNode.Get(7),  enbNode.Get(8));
-  lteHelper->AddX2Interface(enbNode.Get(8),  enbNode.Get(9));
+  lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
+  lteHelper->AddX2Interface(enbNodes.Get(8),  enbNodes.Get(9));
 
-  lteHelper->AddX2Interface(enbNode.Get(10), enbNode.Get(11));
-  lteHelper->AddX2Interface(enbNode.Get(11), enbNode.Get(12));
+  lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
+  lteHelper->AddX2Interface(enbNodes.Get(11), enbNodes.Get(12));
 
-  lteHelper->AddX2Interface(enbNode.Get(13), enbNode.Get(14));
-  lteHelper->AddX2Interface(enbNode.Get(14), enbNode.Get(15));
+  lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
+  lteHelper->AddX2Interface(enbNodes.Get(14), enbNodes.Get(15));
 
-  lteHelper->AddX2Interface(enbNode.Get(16), enbNode.Get(17));
-  lteHelper->AddX2Interface(enbNode.Get(17), enbNode.Get(18));
+  lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+  lteHelper->AddX2Interface(enbNodes.Get(17), enbNodes.Get(18));
 
   lteHelper->SetEnbAntennaModelType ("IsotropicAntennaModel");
 //  lte.SetFadingModel("");
 //  lte.SetHandoverAlgorithmType("");
 
 
-  enbNodes = lteHelper->InstallEnbDevice (enbNode);
-  ueDevices = lteHelper->InstallUeDevice (nodes);
+  enbDevices = lteHelper->InstallEnbDevice (enbNodes);
+  ueDevices = lteHelper->InstallUeDevice (ueNodes);
 
   lteHelper->Attach(ueDevices);
 
   InternetStackHelper stack;
-  stack.Install (nodes);
+  stack.Install (ueNodes);
 
   Simulator::Run ();
   Simulator::Destroy ();
