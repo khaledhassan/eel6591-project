@@ -44,6 +44,14 @@ main (int argc, char *argv[])
 
   LogComponentEnable ("LteHelper", logLevel);
   LogComponentEnable ("EpcHelper", logLevel);
+  LogComponentEnable ("EpcEnbApplication", logLevel);
+  LogComponentEnable ("EpcX2", logLevel);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+
+  LogComponentEnable ("LteEnbRrc", logLevel);
+  LogComponentEnable ("LteEnbNetDevice", logLevel);
+  LogComponentEnable ("LteUeRrc", logLevel);
+  LogComponentEnable ("LteUeNetDevice", logLevel);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
@@ -184,7 +192,16 @@ main (int argc, char *argv[])
 /***********************************************************
  * Run simulation                                          *
  ***********************************************************/
-  Simulator::Stop (Seconds (1));
+  lteHelper->EnablePhyTraces ();
+  lteHelper->EnableMacTraces ();
+  lteHelper->EnableRlcTraces ();
+  lteHelper->EnablePdcpTraces ();
+  Ptr<RadioBearerStatsCalculator> rlcStats = lteHelper->GetRlcStats ();
+  rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+  Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
+  pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+
+  Simulator::Stop (Seconds (60));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
