@@ -52,17 +52,18 @@ main (int argc, char *argv[])
  ***********************************************************/
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  LogComponentEnable ("LteHelper", logLevel);
-  LogComponentEnable ("EpcHelper", logLevel);
-  LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcX2", logLevel);
-  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  // LogComponentEnable ("LteHelper", logLevel);
+  // LogComponentEnable ("EpcHelper", logLevel);
+  // LogComponentEnable ("EpcEnbApplication", logLevel);
+  // LogComponentEnable ("EpcX2", logLevel);
+  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
-  LogComponentEnable ("LteEnbRrc", logLevel);
-  LogComponentEnable ("LteEnbNetDevice", logLevel);
-  LogComponentEnable ("LteUeRrc", logLevel);
-  LogComponentEnable ("LteUeNetDevice", logLevel);
+  // LogComponentEnable ("LteEnbRrc", logLevel);
+  // LogComponentEnable ("LteEnbNetDevice", logLevel);
+  // LogComponentEnable ("LteUeRrc", logLevel);
+  // LogComponentEnable ("LteUeNetDevice", logLevel);
   LogComponentEnable ("MobilityHelper", logLevel);
+  LogComponentEnable ("LteHexGridEnbTopologyHelper", LOG_LEVEL_ALL);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
@@ -96,6 +97,7 @@ main (int argc, char *argv[])
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
   lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
+  lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel"); // necessary for lte-hex-grid-enb-topology-helper!!!
 
   //  lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
   //  lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
@@ -116,6 +118,7 @@ main (int argc, char *argv[])
   NodeContainer enbNodes;
   enbNodes.Create(18);
   NetDeviceContainer enbLteDevs;
+  
 
 
 /***********************************************************
@@ -132,17 +135,25 @@ main (int argc, char *argv[])
  * Add UEs and eNBs to the LTE network                     *
  * Requires setting up mobility models for UEs and eNBs    *
  ***********************************************************/
-  // Install Mobility Model in eNB
-  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < 18; i++)
-    {
-      Vector enbPosition (0, 0, 0); // TODO/XXX: must fix this
-      enbPositionAlloc->Add (enbPosition);
-    }
-  MobilityHelper enbMobility;
+  //ltehexgridEnbTopologyHelper does not set the mobility model, this is not a nice way to do that but it works
+  MobilityHelper enbMobility; 
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  enbMobility.SetPositionAllocator (enbPositionAlloc);
-  enbMobility.Install (enbNodes);
+  enbMobility.Install (enbNodes); 
+
+  Ptr<LteHexGridEnbTopologyHelper> enbGridHelper = CreateObject<LteHexGridEnbTopologyHelper> ();
+  enbGridHelper->SetLteHelper(lteHelper);
+  enbLteDevs = enbGridHelper->SetPositionAndInstallEnbDevice(enbNodes); // replaced lteHelper->installNodes
+
+  for (NodeContainer::Iterator j = enbNodes.Begin ();
+       j != enbNodes.End (); ++j)
+    {
+      Ptr<Node> object = *j;
+      Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
+      NS_ASSERT (position != 0);
+      Vector pos = position->GetPosition ();
+      std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+    }
+  
 
 /***********************************************************
  * Attach RandomWalk Mobility to UEs                       *
@@ -162,7 +173,7 @@ main (int argc, char *argv[])
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
-  enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+  
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
 
 
@@ -188,7 +199,6 @@ main (int argc, char *argv[])
   lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
   lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
 
-  lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
 //  lte.SetHandoverAlgorithmType(""); //TODO/XXX
 
