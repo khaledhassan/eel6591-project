@@ -50,26 +50,28 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
-  LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  // LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  LogComponentEnable ("LteHelper", logLevel);
-  LogComponentEnable ("EpcHelper", logLevel);
-  LogComponentEnable ("EmuEpcHelper", logLevel);
-  LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcX2", logLevel);
-  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  // LogComponentEnable ("LteHelper", logLevel);
+  // LogComponentEnable ("EpcHelper", logLevel);
+  // LogComponentEnable ("EmuEpcHelper", logLevel);
+  // LogComponentEnable ("EpcEnbApplication", logLevel);
+  // LogComponentEnable ("EpcX2", logLevel);
+  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
-  LogComponentEnable ("LteEnbRrc", logLevel);
-  LogComponentEnable ("LteEnbNetDevice", logLevel);
-  LogComponentEnable ("LteUeRrc", logLevel);
-  LogComponentEnable ("LteUeNetDevice", logLevel);
-  LogComponentEnable ("MobilityHelper", logLevel);
+  // LogComponentEnable ("LteEnbRrc", logLevel);
+  // LogComponentEnable ("LteEnbNetDevice", logLevel);
+  // LogComponentEnable ("LteUeRrc", logLevel);
+  // LogComponentEnable ("LteUeNetDevice", logLevel);
+  // LogComponentEnable ("MobilityHelper", logLevel);
 
-  LogComponentEnable ("UdpClient", logLevel);
+  // LogComponentEnable ("UdpClient", logLevel);
 
-  Time::SetResolution (Time::NS);
-  LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+  // Time::SetResolution (Time::NS);
+  // LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+  // LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+
+  LogComponentEnable ("A3RsrpHandoverAlgorithm", LOG_LEVEL_ALL);
 
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
@@ -100,11 +102,11 @@ main (int argc, char *argv[])
   lteHelper->SetEpcHelper (epcHelper);
   lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
 
-  //  lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
-  //  lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
-  //                                            DoubleValue (3.0));
-  //  lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
-  //                                            TimeValue (MilliSeconds (256)));
+   lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
+   lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
+                                             DoubleValue (3.0));
+   lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
+                                             TimeValue (MilliSeconds (300)));
 
   Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
 
