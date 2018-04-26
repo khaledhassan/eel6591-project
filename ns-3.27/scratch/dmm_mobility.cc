@@ -69,11 +69,11 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
-  // XXX/TODO: // double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 15.0; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
-  // XXX/TODO: // cmd.AddValue ("simTime", "Total duration of the simulation (in seconds)", simTime);
+  cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
 
   cmd.Parse (argc, argv);
 
