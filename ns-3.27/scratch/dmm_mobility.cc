@@ -158,7 +158,7 @@ main (int argc, char *argv[])
   ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
     "Time", TimeValue (Seconds (1.0)),
     "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
-    "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
+    "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
@@ -179,7 +179,7 @@ main (int argc, char *argv[])
   lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
   lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
 
-  lteHelper->AddX2Interface(enbNodes.Get(9), enbNodes.Get(10));
+  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
   lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
 
   lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
@@ -213,7 +213,6 @@ main (int argc, char *argv[])
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
-
 
 
   // Output every time position changes
