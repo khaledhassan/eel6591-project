@@ -116,6 +116,26 @@ main (int argc, char *argv[])
   Ipv4AddressHelper ipAddresses;
   ipAddresses.SetBase ("1.0.0.0", "255.255.255.0");
 
+  // Create a single RemoteHost for the UDP application
+  NodeContainer remoteHostContainer;
+  remoteHostContainer.Create (1);
+  Ptr<Node> remoteHost = remoteHostContainer.Get (0);
+  internet.Install (remoteHostContainer);
+  // Create the PointToPoint link between the remoteHost and the EPC
+  PointToPointHelper p2ph;
+  p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
+  p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
+  p2ph.SetChannelAttribute ("Delay", TimeValue (Seconds (0.010)));
+  NetDeviceContainer internetDevices = p2ph.Install (pgw, remoteHost);
+
+  Ipv4InterfaceContainer internetIpIfaces = ipAddresses.Assign (internetDevices);
+
+  // Routing of the Internet Host (towards the LTE network)
+  Ipv4StaticRoutingHelper ipv4RoutingHelper;
+  Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
+  // interface 0 is localhost, 1 is the p2p device
+  remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
+
 
 /***********************************************************
  * Add UEs and eNBs to the LTE network                     *
@@ -185,6 +205,64 @@ main (int argc, char *argv[])
   ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
   lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
 
+
+/***********************************************************
+ * Set up UDP application                                  *
+ ***********************************************************/
+  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+  uint16_t dlPort = 10000;
+  uint16_t ulPort = 20000;
+
+  // randomize a bit start times to avoid simulation artifacts
+  // (e.g., buffer overflows due to packet transmissions happening
+  // exactly at the same time)
+  Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
+  startTimeSeconds->SetAttribute ("Min", DoubleValue (0));
+  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.010));
+
+  for (uint32_t u = 0; u < 20; ++u)
+    {
+      Ptr<Node> ue = ueNodes.Get (u);
+      // Set the default gateway for the UE
+      Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ue->GetObject<Ipv4> ());
+      ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
+
+      ++dlPort;
+      ++ulPort;
+
+      ApplicationContainer clientApps;
+      ApplicationContainer serverApps;
+
+      NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
+      UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
+      clientApps.Add (dlClientHelper.Install (remoteHost));
+      PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
+                                            InetSocketAddress (Ipv4Address::GetAny (), dlPort));
+      serverApps.Add (dlPacketSinkHelper.Install (ue));
+
+      NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
+      UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
+      clientApps.Add (ulClientHelper.Install (ue));
+      PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
+                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
+      serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+
+      Ptr<EpcTft> tft = Create<EpcTft> ();
+      EpcTft::PacketFilter dlpf;
+      dlpf.localPortStart = dlPort;
+      dlpf.localPortEnd = dlPort;
+      tft->Add (dlpf);
+      EpcTft::PacketFilter ulpf;
+      ulpf.remotePortStart = ulPort;
+      ulpf.remotePortEnd = ulPort;
+      tft->Add (ulpf);
+      EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
+      lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
+
+      Time startTime = Seconds (startTimeSeconds->GetValue ());
+      serverApps.Start (startTime);
+      clientApps.Start (startTime);
+    }
 
 /***********************************************************
  * Run simulation                                          *
