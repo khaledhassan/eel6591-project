@@ -198,7 +198,7 @@ main (int argc, char *argv[])
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 
-  Simulator::Stop (Seconds (60));
+  Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
