@@ -163,7 +163,7 @@ main (int argc, char *argv[])
   lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
   lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
 
-  lteHelper->AddX2Interface(enbNodes.Get(9), enbNodes.Get(10));
+  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
   lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
 
   lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
