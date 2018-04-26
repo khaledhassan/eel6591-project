@@ -44,6 +44,7 @@ main (int argc, char *argv[])
 
   LogComponentEnable ("LteHelper", logLevel);
   LogComponentEnable ("EpcHelper", logLevel);
+  LogComponentEnable ("EmuEpcHelper", logLevel);
   LogComponentEnable ("EpcEnbApplication", logLevel);
   LogComponentEnable ("EpcX2", logLevel);
   LogComponentEnable ("EpcSgwPgwApplication", logLevel);
@@ -52,6 +53,8 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteEnbNetDevice", logLevel);
   LogComponentEnable ("LteUeRrc", logLevel);
   LogComponentEnable ("LteUeNetDevice", logLevel);
+
+  LogComponentEnable ("UdpClient", logLevel);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
