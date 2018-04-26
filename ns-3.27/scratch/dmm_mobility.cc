@@ -148,8 +148,6 @@ main (int argc, char *argv[])
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
   enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
-//  EpsBearer bearer;
-//  lteHelper->ActivateDataRadioBearer(ueLteDevs,bearer);
 
 
 /***********************************************************
