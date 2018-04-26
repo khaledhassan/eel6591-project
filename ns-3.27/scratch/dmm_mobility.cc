@@ -148,7 +148,7 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
   for (uint16_t i = 0; i < 18; i++)
     {
-      Vector enbPosition (0, 0, 0); // TODO/XXX: must fix this
+      Vector enbPosition (i*10, i*10, 0); // TODO/XXX: must fix this
       enbPositionAlloc->Add (enbPosition);
     }
   MobilityHelper enbMobility;
@@ -160,7 +160,7 @@ main (int argc, char *argv[])
   Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator> ();
   for (uint16_t i = 0; i < 20; i++)
     {
-      Vector uePosition (0, 0, 0); // TODO/XXX: must fix this
+      Vector uePosition (i*10, i*10, 0); // TODO/XXX: must fix this
       uePositionAlloc->Add (uePosition);
     }
   MobilityHelper ueMobility;
@@ -206,7 +206,8 @@ main (int argc, char *argv[])
  ***********************************************************/
 //assign UE IP addresses after the lteHelper is aware of the UE's InternetStack
   ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
-  lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
+  //lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
+  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs); // TODO/XXX: see issue #2
 
 
 /***********************************************************
