@@ -108,14 +108,13 @@ main (int argc, char *argv[])
 
 
 /***********************************************************
- * Create Internet and IP addresses, to be assigned after  *
- * nodes are added to the LTE network                      *
+ * Create Internet and IP addresses for non-LTE devices    *
  ***********************************************************/
   InternetStackHelper internet;
   internet.Install(ueNodes);
 //  internet.Install(enbNodes);
   Ipv4AddressHelper ipAddresses;
-  ipAddresses.SetBase ("10.10.10.0", "255.255.255.0");
+  ipAddresses.SetBase ("1.0.0.0", "255.255.255.0");
 
 
 /***********************************************************
