@@ -33,6 +33,16 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
+static void
+CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
+{
+  Vector pos = mobility->GetPosition ();
+  Vector vel = mobility->GetVelocity ();
+  std::cout << Simulator::Now () << ", model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+            << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
+            << ", z=" << vel.z << std::endl;
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -52,6 +62,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteEnbNetDevice", logLevel);
   LogComponentEnable ("LteUeRrc", logLevel);
   LogComponentEnable ("LteUeNetDevice", logLevel);
+  LogComponentEnable ("MobilityHelper", logLevel);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
@@ -69,7 +80,7 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
-  double simTime = 15.0; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 2; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
@@ -133,16 +144,21 @@ main (int argc, char *argv[])
   enbMobility.SetPositionAllocator (enbPositionAlloc);
   enbMobility.Install (enbNodes);
 
-  // Install Mobility Model in UEs XXX/TODO: change this to real mobility model!
-  Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < 20; i++)
-    {
-      Vector uePosition (0, 0, 0); // TODO/XXX: must fix this
-      uePositionAlloc->Add (uePosition);
-    }
+/***********************************************************
+ * Attach RandomWalk Mobility to UEs                       *
+ ***********************************************************/
   MobilityHelper ueMobility;
-  ueMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  ueMobility.SetPositionAllocator (uePositionAlloc);
+  ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+    "MinX", DoubleValue (0.0),
+    "MinY", DoubleValue (0.0),
+    "DeltaX", DoubleValue (5.0),
+    "DeltaY", DoubleValue (10.0),
+    "GridWidth", UintegerValue (3),
+    "LayoutType", StringValue ("RowFirst"));
+  ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+    "Time", TimeValue (Seconds (1.0)),
+    "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
+    "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
@@ -198,7 +214,13 @@ main (int argc, char *argv[])
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
 
-  Simulator::Stop (Seconds (60));
+
+
+  // Output every time position changes
+  Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
+                  MakeCallback (&CourseChange));
+
+  Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
   Simulator::Destroy ();
   return 0;
