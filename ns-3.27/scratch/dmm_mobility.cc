@@ -244,6 +244,8 @@ main (int argc, char *argv[])
   ApplicationContainer clientApps; // for UEs
   ApplicationContainer serverApps; // on remoteHost
 
+  std::vector<UdpServerHelper> servers;
+
   for (uint32_t u = 0; u < 20; ++u)
     {
       Ptr<Node> ue = ueNodes.Get (u);
@@ -262,6 +264,7 @@ main (int argc, char *argv[])
       ApplicationContainer thisServer = server.Install (remoteHost);
       thisServer.Start(startTime);
       serverApps.Add(thisServer);
+      servers.push_back(server);
 
       // set up a client for this UE to connect to it's server
       UdpTraceClientHelper client(remoteHostAddr, port, "");
@@ -309,6 +312,13 @@ main (int argc, char *argv[])
     NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetLost (), 0, "Packets were lost !");
     NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetReceived (), 247, "Did not receive expected number of packets !");
   */
+ std::vector<UdpServerHelper>::iterator i;
+ uint32_t u;
+ for (u = 1, i = servers.begin(); i != servers.end(); i++, u++)
+    {
+      std::cout << "Server for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
+      std::cout << "Server for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+    }
 
   return 0;
 }
