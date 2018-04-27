@@ -311,7 +311,7 @@ AnimationInterface anim (animFile);
     {
       anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
       anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
-    }
+   }
 
   for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
     {
@@ -322,7 +322,7 @@ AnimationInterface anim (animFile);
 
   anim.EnablePacketMetadata ();
   anim.SetMobilityPollInterval (Seconds (0.0001));
-  anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+ // anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
   //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
   //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
 
