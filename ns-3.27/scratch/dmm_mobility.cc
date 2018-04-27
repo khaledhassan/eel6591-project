@@ -50,6 +50,7 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
+  /*
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
   LogComponentEnable ("LteHelper", logLevel);
@@ -68,7 +69,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("UdpClient", logLevel);
   LogComponentEnable ("UdpTraceClient", logLevel);
   LogComponentEnable ("UdpServer", logLevel);
-
+  */
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
@@ -112,8 +113,9 @@ main (int argc, char *argv[])
 
 
 //creates 20 nodes we can use as mobile nodes
+  uint32_t numUEs = 2;
   NodeContainer ueNodes;
-  ueNodes.Create (20);
+  ueNodes.Create (numUEs);
   NetDeviceContainer ueLteDevs;
   Ipv4InterfaceContainer ueIpIfaces;
 
@@ -246,7 +248,7 @@ main (int argc, char *argv[])
 
   std::vector<UdpServerHelper> servers;
 
-  for (uint32_t u = 0; u < 20; ++u)
+  for (uint32_t u = 0; u < numUEs; ++u)
     {
       Ptr<Node> ue = ueNodes.Get (u);
       // Set the default gateway for the UE
