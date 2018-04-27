@@ -22,6 +22,7 @@
 #include "ns3/point-to-point-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/eps-bearer.h"
+#include "ns3/netanim-module.h"
 #include "ns3/lte-helper.h"
 #include "ns3/epc-helper.h"
 #include "ns3/lte-net-device.h"
@@ -52,18 +53,18 @@ main (int argc, char *argv[])
  ***********************************************************/
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  LogComponentEnable ("LteHelper", logLevel);
-  LogComponentEnable ("EpcHelper", logLevel);
-  LogComponentEnable ("EmuEpcHelper", logLevel);
-  LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcX2", logLevel);
-  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+//  LogComponentEnable ("LteHelper", logLevel);
+//  LogComponentEnable ("EpcHelper", logLevel);
+//  LogComponentEnable ("EmuEpcHelper", logLevel);
+//  LogComponentEnable ("EpcEnbApplication", logLevel);
+//  LogComponentEnable ("EpcX2", logLevel);
+//  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
-  LogComponentEnable ("LteEnbRrc", logLevel);
-  LogComponentEnable ("LteEnbNetDevice", logLevel);
-  LogComponentEnable ("LteUeRrc", logLevel);
-  LogComponentEnable ("LteUeNetDevice", logLevel);
-  LogComponentEnable ("MobilityHelper", logLevel);
+//  LogComponentEnable ("LteEnbRrc", logLevel);
+//  LogComponentEnable ("LteEnbNetDevice", logLevel);
+//  LogComponentEnable ("LteUeRrc", logLevel);
+//  LogComponentEnable ("LteUeNetDevice", logLevel);
+//  LogComponentEnable ("MobilityHelper", logLevel);
 
   LogComponentEnable ("UdpClient", logLevel);
 
@@ -88,7 +89,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
-
+  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
   cmd.Parse (argc, argv);
 
 
@@ -301,8 +302,17 @@ main (int argc, char *argv[])
   Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback (&CourseChange));
 
+
+//An animation for the project
+AnimationInterface anim (animFile);
+anim.EnablePacketMetadata (true);
+anim.SetMobilityPollInterval (Seconds (1));
+anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+
+
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
+  std::cout << "Animation Trace file created:" << animFile.c_str ()<< std::endl;
   Simulator::Destroy ();
   return 0;
 }
