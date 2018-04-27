@@ -54,26 +54,28 @@ main (int argc, char *argv[])
  ***********************************************************/
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  // LogComponentEnable ("LteHelper", logLevel);
-  // LogComponentEnable ("EpcHelper", logLevel);
-  // LogComponentEnable ("EmuEpcHelper", logLevel);
-  // LogComponentEnable ("EpcEnbApplication", logLevel);
-  // LogComponentEnable ("EpcX2", logLevel);
-  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  LogComponentEnable ("LteHelper", logLevel);
+  LogComponentEnable ("EpcHelper", logLevel);
+  LogComponentEnable ("EmuEpcHelper", logLevel);
+  LogComponentEnable ("EpcEnbApplication", logLevel);
+  LogComponentEnable ("EpcX2", logLevel);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
-  // LogComponentEnable ("LteEnbRrc", logLevel);
-  // LogComponentEnable ("LteEnbNetDevice", logLevel);
-  // LogComponentEnable ("LteUeRrc", logLevel);
-  // LogComponentEnable ("LteUeNetDevice", logLevel);
+  LogComponentEnable ("LteEnbRrc", logLevel);
+  LogComponentEnable ("LteEnbNetDevice", logLevel);
+  LogComponentEnable ("LteUeRrc", logLevel);
+  LogComponentEnable ("LteUeNetDevice", logLevel);
   LogComponentEnable ("MobilityHelper", logLevel);
 
-  // LogComponentEnable ("UdpClient", logLevel);
-
-  // Time::SetResolution (Time::NS);
-  // LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-  // LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+  LogComponentEnable ("UdpClient", logLevel);
+  LogComponentEnable ("UdpTraceClient", logLevel);
+  LogComponentEnable ("UdpServer", logLevel);
 
   LogComponentEnable ("A3RsrpHandoverAlgorithm", LOG_LEVEL_ALL);
+
+  Time::SetResolution (Time::NS);
+  LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
@@ -114,15 +116,14 @@ main (int argc, char *argv[])
 
 
 //creates 20 nodes we can use as mobile nodes
-  int numUEs = 1;
   NodeContainer ueNodes;
-  ueNodes.Create (numUEs);
+  ueNodes.Create (20);
   NetDeviceContainer ueLteDevs;
   Ipv4InterfaceContainer ueIpIfaces;
 
 //create 18 eNodeBs
   NodeContainer enbNodes;
-  enbNodes.Create(2);
+  enbNodes.Create(18);
   NetDeviceContainer enbLteDevs;
 
 
@@ -162,18 +163,11 @@ main (int argc, char *argv[])
  ***********************************************************/
   // Install Mobility Model in eNB
   Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  // for (uint16_t i = 0; i < 18; i++)
-  //   {
-  //     Vector enbPosition (i*10, i*10, 30); // TODO/XXX: must fix this
-  //     enbPositionAlloc->Add (enbPosition);
-  //   }
-
-  // JUST Have 2 enbs for now
-  Vector enbPosition (1000, 0, 30); // TODO/XXX: must fix this
-  enbPositionAlloc->Add (enbPosition);
-  Vector enbPosition2 (-1000, 0, 30); // TODO/XXX: must fix this
-  enbPositionAlloc->Add (enbPosition2);
-
+  for (uint16_t i = 0; i < 18; i++)
+    {
+      Vector enbPosition (i*10, i*10, 0); // TODO/XXX: must fix this
+      enbPositionAlloc->Add (enbPosition);
+    }
   MobilityHelper enbMobility;
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   enbMobility.SetPositionAllocator (enbPositionAlloc);
@@ -219,22 +213,22 @@ main (int argc, char *argv[])
  ***********************************************************/
 //Based on the topology in the paper, we connect each enodebs in each network
   lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
-  // lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
+  lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
 
-  // lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
-  // lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
+  lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
+  lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
 
-  // lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
-  // lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
+  lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
+  lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
 
-  // lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
-  // lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
+  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
+  lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
 
-  // lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
-  // lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
+  lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
+  lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
 
-  // lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
-  // lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+  lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
+  lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
 
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
@@ -255,58 +249,58 @@ main (int argc, char *argv[])
  * Set up UDP application                                  *
  ***********************************************************/
   Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
-  uint16_t dlPort = 10000;
-  uint16_t ulPort = 20000;
+  uint16_t port = 10000;
 
   // randomize a bit start times to avoid simulation artifacts
   // (e.g., buffer overflows due to packet transmissions happening
   // exactly at the same time)
   Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
-  startTimeSeconds->SetAttribute ("Min", DoubleValue (0));
-  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.010));
+  startTimeSeconds->SetAttribute ("Min", DoubleValue (0.5));
+  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.600));
 
-  for (int u = 0; u < numUEs; ++u)
+  ApplicationContainer clientApps; // for UEs
+  ApplicationContainer serverApps; // on remoteHost
+
+  std::vector<UdpServerHelper> servers;
+
+  for (uint32_t u = 0; u < 20; ++u)
     {
       Ptr<Node> ue = ueNodes.Get (u);
       // Set the default gateway for the UE
       Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ue->GetObject<Ipv4> ());
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
 
-      ++dlPort;
-      ++ulPort;
+      ++port;
 
-      ApplicationContainer clientApps;
-      ApplicationContainer serverApps;
+      Time startTime = Seconds (startTimeSeconds->GetValue ());
 
-      NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
-      UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
-      clientApps.Add (dlClientHelper.Install (remoteHost));
-      PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
-                                            InetSocketAddress (Ipv4Address::GetAny (), dlPort));
-      serverApps.Add (dlPacketSinkHelper.Install (ue));
+      NS_LOG_LOGIC ("installing UDP Client+Server for UE " << u);
 
-      NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
-      UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
-      clientApps.Add (ulClientHelper.Install (ue));
-      PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
-                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
-      serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+      // set up new server just for this client and attach it to the remoteHost
+      UdpServerHelper server (port);
+      ApplicationContainer thisServer = server.Install (remoteHost);
+      thisServer.Start(startTime);
+      serverApps.Add(thisServer);
+      servers.push_back(server);
+
+      // set up a client for this UE to connect to it's server
+      UdpTraceClientHelper client(remoteHostAddr, port, "");
+      client.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
+      ApplicationContainer thisClient = client.Install(ue);
+      thisClient.Start(startTime);
+      clientApps.Add(thisClient);
 
       Ptr<EpcTft> tft = Create<EpcTft> ();
       EpcTft::PacketFilter dlpf;
-      dlpf.localPortStart = dlPort;
-      dlpf.localPortEnd = dlPort;
+      dlpf.localPortStart = port;
+      dlpf.localPortEnd = port;
       tft->Add (dlpf);
       EpcTft::PacketFilter ulpf;
-      ulpf.remotePortStart = ulPort;
-      ulpf.remotePortEnd = ulPort;
+      ulpf.remotePortStart = port;
+      ulpf.remotePortEnd = port;
       tft->Add (ulpf);
       EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
-
-      Time startTime = Seconds (startTimeSeconds->GetValue ());
-      serverApps.Start (startTime);
-      clientApps.Start (startTime);
     }
 
 /***********************************************************
@@ -329,5 +323,19 @@ main (int argc, char *argv[])
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
   Simulator::Destroy ();
+
+  //TODO/XXX, read server statistics like so, but iterate through each object in serverApps:
+  /*
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetLost (), 0, "Packets were lost !");
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetReceived (), 247, "Did not receive expected number of packets !");
+  */
+ std::vector<UdpServerHelper>::iterator i;
+ uint32_t u;
+ for (u = 1, i = servers.begin(); i != servers.end(); i++, u++)
+    {
+      std::cout << "Server for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
+      std::cout << "Server for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+    }
+
   return 0;
 }
