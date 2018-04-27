@@ -66,6 +66,8 @@ main (int argc, char *argv[])
   LogComponentEnable ("MobilityHelper", logLevel);
 
   LogComponentEnable ("UdpClient", logLevel);
+  LogComponentEnable ("UdpTraceClient", logLevel);
+  LogComponentEnable ("UdpServer", logLevel);
 
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
@@ -230,15 +232,17 @@ main (int argc, char *argv[])
  * Set up UDP application                                  *
  ***********************************************************/
   Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
-  uint16_t dlPort = 10000;
-  uint16_t ulPort = 20000;
+  uint16_t port = 10000;
 
   // randomize a bit start times to avoid simulation artifacts
   // (e.g., buffer overflows due to packet transmissions happening
   // exactly at the same time)
   Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
-  startTimeSeconds->SetAttribute ("Min", DoubleValue (0));
-  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.010));
+  startTimeSeconds->SetAttribute ("Min", DoubleValue (0.5));
+  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.600));
+
+  ApplicationContainer clientApps; // for UEs
+  ApplicationContainer serverApps; // on remoteHost
 
   for (uint32_t u = 0; u < 20; ++u)
     {
@@ -247,41 +251,36 @@ main (int argc, char *argv[])
       Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ue->GetObject<Ipv4> ());
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
 
-      ++dlPort;
-      ++ulPort;
+      ++port;
 
-      ApplicationContainer clientApps;
-      ApplicationContainer serverApps;
+      Time startTime = Seconds (startTimeSeconds->GetValue ());
 
-      NS_LOG_LOGIC ("installing UDP DL app for UE " << u);
-      UdpClientHelper dlClientHelper (ueIpIfaces.GetAddress (u), dlPort);
-      clientApps.Add (dlClientHelper.Install (remoteHost));
-      PacketSinkHelper dlPacketSinkHelper ("ns3::UdpSocketFactory",
-                                            InetSocketAddress (Ipv4Address::GetAny (), dlPort));
-      serverApps.Add (dlPacketSinkHelper.Install (ue));
+      NS_LOG_LOGIC ("installing UDP Client+Server for UE " << u);
 
-      NS_LOG_LOGIC ("installing UDP UL app for UE " << u);
-      UdpClientHelper ulClientHelper (remoteHostAddr, ulPort);
-      clientApps.Add (ulClientHelper.Install (ue));
-      PacketSinkHelper ulPacketSinkHelper ("ns3::UdpSocketFactory",
-                                            InetSocketAddress (Ipv4Address::GetAny (), ulPort));
-      serverApps.Add (ulPacketSinkHelper.Install (remoteHost));
+      // set up new server just for this client and attach it to the remoteHost
+      UdpServerHelper server (port);
+      ApplicationContainer thisServer = server.Install (remoteHost);
+      thisServer.Start(startTime);
+      serverApps.Add(thisServer);
+
+      // set up a client for this UE to connect to it's server
+      UdpTraceClientHelper client(remoteHostAddr, port, "");
+      client.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
+      ApplicationContainer thisClient = client.Install(ue);
+      thisClient.Start(startTime);
+      clientApps.Add(thisClient);
 
       Ptr<EpcTft> tft = Create<EpcTft> ();
       EpcTft::PacketFilter dlpf;
-      dlpf.localPortStart = dlPort;
-      dlpf.localPortEnd = dlPort;
+      dlpf.localPortStart = port;
+      dlpf.localPortEnd = port;
       tft->Add (dlpf);
       EpcTft::PacketFilter ulpf;
-      ulpf.remotePortStart = ulPort;
-      ulpf.remotePortEnd = ulPort;
+      ulpf.remotePortStart = port;
+      ulpf.remotePortEnd = port;
       tft->Add (ulpf);
       EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
-
-      Time startTime = Seconds (startTimeSeconds->GetValue ());
-      serverApps.Start (startTime);
-      clientApps.Start (startTime);
     }
 
 /***********************************************************
@@ -304,5 +303,12 @@ main (int argc, char *argv[])
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
   Simulator::Destroy ();
+
+  //TODO/XXX, read server statistics like so, but iterate through each object in serverApps:
+  /*
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetLost (), 0, "Packets were lost !");
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetReceived (), 247, "Did not receive expected number of packets !");
+  */
+
   return 0;
 }
