@@ -297,8 +297,8 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (5.0),
-    "DeltaY", DoubleValue (10.0),
+    "DeltaX", DoubleValue (cellSize*0.75),
+    "DeltaY", DoubleValue (cellSize*0.75),
     "GridWidth", UintegerValue (3),
     "LayoutType", StringValue ("RowFirst"));
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
@@ -306,7 +306,7 @@ main (int argc, char *argv[])
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
   //   "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
   ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
-                              "Bounds", RectangleValue (Rectangle (-1500, 1500, -100, 100)),
+                              "Bounds", RectangleValue (Rectangle (-cellSize, (18/3)*cellSize, -cellSize, (3)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
                               "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=100]"),
                               "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
   ueMobility.Install (ueNodes);
