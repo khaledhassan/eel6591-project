@@ -33,6 +33,110 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
+
+const uint32_t numUEs = 2;
+
+Time m_ueHandoverStart[numUEs];
+Time m_enbHandoverStart[numUEs];
+
+
+void
+NotifyConnectionEstablishedUe (std::string context,
+                               uint64_t imsi,
+                               uint16_t cellid,
+                               uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " UE IMSI " << imsi
+            << ": connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti,
+                       uint16_t targetCellId)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << "s UE IMSI " << imsi
+            << ": previously connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << ", doing handover to CellId " << targetCellId
+            << std::endl;
+  m_ueHandoverStart[imsi-1] = Simulator::Now ();
+}
+
+void
+NotifyHandoverEndOkUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " UE IMSI " << imsi
+            << ": successful handover to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+  Time delay = Simulator::Now () - m_ueHandoverStart[imsi-1];
+  std::cout << "UE"
+            << imsi << " Delay: " << delay.GetSeconds()*1000 << "ms" << std::endl;
+}
+
+void
+NotifyConnectionEstablishedEnb (std::string context,
+                                uint64_t imsi,
+                                uint16_t cellid,
+                                uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": successful connection of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti,
+                        uint16_t targetCellId)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": start handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << " to CellId " << targetCellId
+            << std::endl;
+  m_enbHandoverStart[imsi-1] = Simulator::Now ();
+}
+
+void
+NotifyHandoverEndOkEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": completed handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+  Time delay = Simulator::Now () - m_enbHandoverStart[imsi-1];
+  std::cout << "ENB"
+            << cellid
+            << " with UE" << imsi << "Delay: "<< delay.GetSeconds()*1000 << "ms" << std::endl;
+}
+
 static void
 CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
 {
@@ -50,21 +154,27 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
+  /*
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  // LogComponentEnable ("LteHelper", logLevel);
-  // LogComponentEnable ("EpcHelper", logLevel);
-  // LogComponentEnable ("EpcEnbApplication", logLevel);
-  // LogComponentEnable ("EpcX2", logLevel);
-  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  LogComponentEnable ("LteHelper", logLevel);
+  LogComponentEnable ("EpcHelper", logLevel);
+  LogComponentEnable ("EmuEpcHelper", logLevel);
+  LogComponentEnable ("EpcEnbApplication", logLevel);
+  LogComponentEnable ("EpcX2", logLevel);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
-  // LogComponentEnable ("LteEnbRrc", logLevel);
-  // LogComponentEnable ("LteEnbNetDevice", logLevel);
-  // LogComponentEnable ("LteUeRrc", logLevel);
-  // LogComponentEnable ("LteUeNetDevice", logLevel);
+  LogComponentEnable ("LteEnbRrc", logLevel);
+  LogComponentEnable ("LteEnbNetDevice", logLevel);
+  LogComponentEnable ("LteUeRrc", logLevel);
+  LogComponentEnable ("LteUeNetDevice", logLevel);
   LogComponentEnable ("MobilityHelper", logLevel);
   LogComponentEnable ("LteHexGridEnbTopologyHelper", LOG_LEVEL_ALL);
 
+  LogComponentEnable ("UdpClient", logLevel);
+  LogComponentEnable ("UdpTraceClient", logLevel);
+  LogComponentEnable ("UdpServer", logLevel);
+  */
   Time::SetResolution (Time::NS);
   LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
   LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
@@ -110,7 +220,7 @@ main (int argc, char *argv[])
 
 //creates 20 nodes we can use as mobile nodes
   NodeContainer ueNodes;
-  ueNodes.Create (20);
+  ueNodes.Create (numUEs);
   NetDeviceContainer ueLteDevs;
   Ipv4InterfaceContainer ueIpIfaces;
 
@@ -129,6 +239,26 @@ main (int argc, char *argv[])
 //  internet.Install(enbNodes);
   Ipv4AddressHelper ipAddresses;
   ipAddresses.SetBase ("1.0.0.0", "255.255.255.0");
+
+  // Create a single RemoteHost for the UDP application
+  NodeContainer remoteHostContainer;
+  remoteHostContainer.Create (1);
+  Ptr<Node> remoteHost = remoteHostContainer.Get (0);
+  internet.Install (remoteHostContainer);
+  // Create the PointToPoint link between the remoteHost and the EPC
+  PointToPointHelper p2ph;
+  p2ph.SetDeviceAttribute ("DataRate", DataRateValue (DataRate ("100Gb/s")));
+  p2ph.SetDeviceAttribute ("Mtu", UintegerValue (1500));
+  p2ph.SetChannelAttribute ("Delay", TimeValue (Seconds (0.010)));
+  NetDeviceContainer internetDevices = p2ph.Install (pgw, remoteHost);
+
+  Ipv4InterfaceContainer internetIpIfaces = ipAddresses.Assign (internetDevices);
+
+  // Routing of the Internet Host (towards the LTE network)
+  Ipv4StaticRoutingHelper ipv4RoutingHelper;
+  Ptr<Ipv4StaticRouting> remoteHostStaticRouting = ipv4RoutingHelper.GetStaticRouting (remoteHost->GetObject<Ipv4> ());
+  // interface 0 is localhost, 1 is the p2p device
+  remoteHostStaticRouting->AddNetworkRouteTo (Ipv4Address ("7.0.0.0"), Ipv4Mask ("255.0.0.0"), 1);
 
 
 /***********************************************************
@@ -209,8 +339,67 @@ main (int argc, char *argv[])
  ***********************************************************/
 //assign UE IP addresses after the lteHelper is aware of the UE's InternetStack
   ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
-  lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
+  //lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
+  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs); // TODO/XXX: see issue #2
 
+
+/***********************************************************
+ * Set up UDP application                                  *
+ ***********************************************************/
+  Ipv4Address remoteHostAddr = internetIpIfaces.GetAddress (1);
+  uint16_t port = 10000;
+
+  // randomize a bit start times to avoid simulation artifacts
+  // (e.g., buffer overflows due to packet transmissions happening
+  // exactly at the same time)
+  Ptr<UniformRandomVariable> startTimeSeconds = CreateObject<UniformRandomVariable> ();
+  startTimeSeconds->SetAttribute ("Min", DoubleValue (0.5));
+  startTimeSeconds->SetAttribute ("Max", DoubleValue (0.600));
+
+  ApplicationContainer clientApps; // for UEs
+  ApplicationContainer serverApps; // on remoteHost
+
+  std::vector<UdpServerHelper> servers;
+
+  for (uint32_t u = 0; u < numUEs; ++u)
+    {
+      Ptr<Node> ue = ueNodes.Get (u);
+      // Set the default gateway for the UE
+      Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ue->GetObject<Ipv4> ());
+      ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
+
+      ++port;
+
+      Time startTime = Seconds (startTimeSeconds->GetValue ());
+
+      NS_LOG_LOGIC ("installing UDP Client+Server for UE " << u);
+
+      // set up new server just for this client and attach it to the remoteHost
+      UdpServerHelper server (port);
+      ApplicationContainer thisServer = server.Install (remoteHost);
+      thisServer.Start(startTime);
+      serverApps.Add(thisServer);
+      servers.push_back(server);
+
+      // set up a client for this UE to connect to it's server
+      UdpTraceClientHelper client(remoteHostAddr, port, "");
+      client.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
+      ApplicationContainer thisClient = client.Install(ue);
+      thisClient.Start(startTime);
+      clientApps.Add(thisClient);
+
+      Ptr<EpcTft> tft = Create<EpcTft> ();
+      EpcTft::PacketFilter dlpf;
+      dlpf.localPortStart = port;
+      dlpf.localPortEnd = port;
+      tft->Add (dlpf);
+      EpcTft::PacketFilter ulpf;
+      ulpf.remotePortStart = port;
+      ulpf.remotePortEnd = port;
+      tft->Add (ulpf);
+      EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
+      lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
+    }
 
 /***********************************************************
  * Run simulation                                          *
@@ -229,8 +418,37 @@ main (int argc, char *argv[])
   Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback (&CourseChange));
 
+  // connect custom trace sinks for RRC connection establishment and handover notification
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkUe));
+
+
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
   Simulator::Destroy ();
+
+  //TODO/XXX, read server statistics like so, but iterate through each object in serverApps:
+  /*
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetLost (), 0, "Packets were lost !");
+    NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetReceived (), 247, "Did not receive expected number of packets !");
+  */
+ std::vector<UdpServerHelper>::iterator i;
+ uint32_t u;
+ for (u = 1, i = servers.begin(); i != servers.end(); i++, u++)
+    {
+      std::cout << "Server for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
+      std::cout << "Server for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+    }
+
   return 0;
 }
