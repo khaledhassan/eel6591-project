@@ -90,10 +90,12 @@ main (int argc, char *argv[])
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
   double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double cellSize = 500; // m
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
+  cmd.AddValue ("cellSize", "Cell grid spacing in X and Y (in meters, default = 500)", cellSize);
 
   cmd.Parse (argc, argv);
 
@@ -162,15 +164,15 @@ main (int argc, char *argv[])
  * Requires setting up mobility models for UEs and eNBs    *
  ***********************************************************/
   // Install Mobility Model in eNB
-  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < 18; i++)
-    {
-      Vector enbPosition (i*10, i*10, 0); // TODO/XXX: must fix this
-      enbPositionAlloc->Add (enbPosition);
-    }
   MobilityHelper enbMobility;
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  enbMobility.SetPositionAllocator (enbPositionAlloc);
+  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+    "MinX", DoubleValue (0.0),
+    "MinY", DoubleValue (0.0),
+    "DeltaX", DoubleValue (cellSize),
+    "DeltaY", DoubleValue (cellSize),
+    "GridWidth", UintegerValue (3),
+    "LayoutType", StringValue ("RowFirst"));
   enbMobility.Install (enbNodes);
 
   for (NodeContainer::Iterator j = enbNodes.Begin (); j != enbNodes.End (); ++j)
