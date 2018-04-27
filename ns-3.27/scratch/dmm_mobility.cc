@@ -33,12 +33,8 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
-
-const uint32_t numUEs = 2;
-
-Time m_ueHandoverStart[numUEs];
-Time m_enbHandoverStart[numUEs];
-
+std::vector<Time> m_ueHandoverStart;
+std::vector<Time> m_enbHandoverStart;
 
 void
 NotifyConnectionEstablishedUe (std::string context,
@@ -143,7 +139,7 @@ CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
   Vector pos = mobility->GetPosition ();
   Vector vel = mobility->GetVelocity ();
   std::cout << Simulator::Now () << ", model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
-            << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
+            << ", z=" << pos.z << "; VEL: x=" << vel.x << ", y=" << vel.y
             << ", z=" << vel.z << std::endl;
 }
 
@@ -195,13 +191,17 @@ main (int argc, char *argv[])
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
   double simTime = 2; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  uint32_t numUEs = 2;
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
+  cmd.AddValue ("numUEs", "Number of UEs (default = 2)", simTime);
 
   cmd.Parse (argc, argv);
 
+  m_ueHandoverStart.reserve(numUEs);
+  m_enbHandoverStart.reserve(numUEs);
 
 /***********************************************************
  * Create LTE, EPC, and UE/eNB Nodes                       *
