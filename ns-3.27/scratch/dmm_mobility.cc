@@ -52,30 +52,32 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
-  LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  LogComponentEnable ("LteHelper", logLevel);
-  LogComponentEnable ("EpcHelper", logLevel);
-  LogComponentEnable ("EmuEpcHelper", logLevel);
-  LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcX2", logLevel);
-  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  LogComponentEnable ("LteHelper", logLevelLTE);
+  LogComponentEnable ("EpcHelper", logLevelLTE);
+  LogComponentEnable ("EmuEpcHelper", logLevelLTE);
+  LogComponentEnable ("EpcEnbApplication", logLevelLTE);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevelLTE);
 
-  LogComponentEnable ("LteEnbRrc", logLevel);
-  LogComponentEnable ("LteEnbNetDevice", logLevel);
-  LogComponentEnable ("LteUeRrc", logLevel);
-  LogComponentEnable ("LteUeNetDevice", logLevel);
-  LogComponentEnable ("MobilityHelper", logLevel);
+  LogComponentEnable ("LteEnbRrc", logLevelLTE);
+  LogComponentEnable ("LteEnbNetDevice", logLevelLTE);
+  LogComponentEnable ("LteUeRrc", logLevelLTE);
+  LogComponentEnable ("LteUeNetDevice", logLevelLTE);
 
-  LogComponentEnable ("UdpClient", logLevel);
-  LogComponentEnable ("UdpTraceClient", logLevel);
-  LogComponentEnable ("UdpServer", logLevel);
+  LogComponentEnable ("EpcX2", logLevelMobility);
+  LogComponentEnable ("MobilityHelper", logLevelMobility);
+  LogComponentEnable ("A3RsrpHandoverAlgorithm", logLevelMobility);
 
-  LogComponentEnable ("A3RsrpHandoverAlgorithm", LOG_LEVEL_ALL);
+  LogComponentEnable ("UdpClient", logLevelUDP);
+  LogComponentEnable ("UdpTraceClient", logLevelUDP);
+  LogComponentEnable ("UdpServer", logLevelUDP);
+  LogComponentEnable ("UdpEchoClientApplication", logLevelUDP);
+  LogComponentEnable ("UdpEchoServerApplication", logLevelUDP);
 
   Time::SetResolution (Time::NS);
-  LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
