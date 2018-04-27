@@ -93,6 +93,7 @@ main (int argc, char *argv[])
   cmd.Parse (argc, argv);
 
 
+
 /***********************************************************
  * Create LTE, EPC, and UE/eNB Nodes                       *
  ***********************************************************/
@@ -305,9 +306,27 @@ main (int argc, char *argv[])
 
 //An animation for the project
 AnimationInterface anim (animFile);
-anim.EnablePacketMetadata (true);
-anim.SetMobilityPollInterval (Seconds (1));
-anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+
+  for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
+      anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
+    }
+
+  for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (enbNodes.Get (i), "ENB"); 
+      anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0); 
+    }
+
+
+  anim.EnablePacketMetadata ();
+  anim.SetMobilityPollInterval (Seconds (0.0001));
+  anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
+  //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+
+  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
 
 
   Simulator::Stop (Seconds (simTime));
