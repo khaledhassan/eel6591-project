@@ -33,6 +33,110 @@ using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
+
+const uint32_t numUEs = 2;
+
+Time m_ueHandoverStart[numUEs];
+Time m_enbHandoverStart[numUEs];
+
+
+void
+NotifyConnectionEstablishedUe (std::string context,
+                               uint64_t imsi,
+                               uint16_t cellid,
+                               uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " UE IMSI " << imsi
+            << ": connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti,
+                       uint16_t targetCellId)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << "s UE IMSI " << imsi
+            << ": previously connected to CellId " << cellid
+            << " with RNTI " << rnti
+            << ", doing handover to CellId " << targetCellId
+            << std::endl;
+  m_ueHandoverStart[imsi-1] = Simulator::Now ();
+}
+
+void
+NotifyHandoverEndOkUe (std::string context,
+                       uint64_t imsi,
+                       uint16_t cellid,
+                       uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " UE IMSI " << imsi
+            << ": successful handover to CellId " << cellid
+            << " with RNTI " << rnti
+            << std::endl;
+  Time delay = Simulator::Now () - m_ueHandoverStart[imsi-1];
+  std::cout << "UE"
+            << imsi << " Delay: " << delay.GetSeconds()*1000 << "ms" << std::endl;
+}
+
+void
+NotifyConnectionEstablishedEnb (std::string context,
+                                uint64_t imsi,
+                                uint16_t cellid,
+                                uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": successful connection of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+}
+
+void
+NotifyHandoverStartEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti,
+                        uint16_t targetCellId)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": start handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << " to CellId " << targetCellId
+            << std::endl;
+  m_enbHandoverStart[imsi-1] = Simulator::Now ();
+}
+
+void
+NotifyHandoverEndOkEnb (std::string context,
+                        uint64_t imsi,
+                        uint16_t cellid,
+                        uint16_t rnti)
+{
+  std::cout << int(Simulator::Now().GetSeconds())
+            << "s "
+            << " eNB CellId " << cellid
+            << ": completed handover of UE with IMSI " << imsi
+            << " RNTI " << rnti
+            << std::endl;
+  Time delay = Simulator::Now () - m_enbHandoverStart[imsi-1];
+  std::cout << "ENB"
+            << cellid
+            << " with UE" << imsi << "Delay: "<< delay.GetSeconds()*1000 << "ms" << std::endl;
+}
+
 static void
 CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
 {
@@ -113,7 +217,6 @@ main (int argc, char *argv[])
 
 
 //creates 20 nodes we can use as mobile nodes
-  uint32_t numUEs = 2;
   NodeContainer ueNodes;
   ueNodes.Create (numUEs);
   NetDeviceContainer ueLteDevs;
@@ -304,6 +407,21 @@ main (int argc, char *argv[])
   // Output every time position changes
   Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback (&CourseChange));
+
+  // connect custom trace sinks for RRC connection establishment and handover notification
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/ConnectionEstablished",
+                   MakeCallback (&NotifyConnectionEstablishedUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverStart",
+                   MakeCallback (&NotifyHandoverStartUe));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkEnb));
+  Config::Connect ("/NodeList/*/DeviceList/*/LteUeRrc/HandoverEndOk",
+                   MakeCallback (&NotifyHandoverEndOkUe));
+
 
   Simulator::Stop (Seconds (simTime));
   Simulator::Run ();
