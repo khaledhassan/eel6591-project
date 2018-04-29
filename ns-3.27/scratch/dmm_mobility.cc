@@ -191,7 +191,7 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
-  double simTime = 1; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
   double cellSize = 500; // m
   uint32_t numUEs = 2;
 
@@ -219,7 +219,7 @@ main (int argc, char *argv[])
                                              DoubleValue (3.0));
   lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
                                              TimeValue (MilliSeconds (300)));
-  /lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::UrbanMacroCellPropagationLossModel"));
+  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::UrbanMacroCellPropagationLossModel"));
   Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
 
 
