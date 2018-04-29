@@ -167,7 +167,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteEnbNetDevice", logLevelLTE);
   LogComponentEnable ("LteUeRrc", logLevelLTE);
   LogComponentEnable ("LteUeNetDevice", logLevelLTE);
-  LogComponentEnable ("TraceFadingLossModel", LOG_LEVEL_ALL);
+  LogComponentEnable ("TraceFadingLossModel", logLevelLTE);
 
   LogComponentEnable ("EpcX2", logLevelMobility);
   LogComponentEnable ("MobilityHelper", logLevelMobility);
@@ -229,7 +229,17 @@ main (int argc, char *argv[])
                                              DoubleValue (3.0));
   lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
                                              TimeValue (MilliSeconds (300)));
-  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::UrbanMacroCellPropagationLossModel"));
+  lteHelper->SetAttribute ("PathlossModel", StringValue ("ns3::UrbanMacroCellPropagationLossModel")); // Will have warnings since model does not consider frequency
+  lteHelper->SetFadingModel("ns3::TraceFadingLossModel");
+  lteHelper->SetFadingModelAttribute ("TraceFilename", StringValue ("./src/lte/model/fading-traces/fading_trace_EPA_3kmph.fad"));
+  lteHelper->SetFadingModelAttribute ("TraceLength", TimeValue (Seconds (10.0)));
+  lteHelper->SetFadingModelAttribute ("SamplesNum", UintegerValue (10000));
+  lteHelper->SetFadingModelAttribute ("WindowSize", TimeValue (Seconds (0.5)));
+  lteHelper->SetFadingModelAttribute ("RbNum", UintegerValue (100));
+
+
+
+
   Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
 
 
@@ -332,7 +342,9 @@ main (int argc, char *argv[])
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
+  std::cout << "INSTALLING ENBs with lteHelper...." << std::endl ; 
   enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+  std::cout << "INSTALLING UEs with lteHelper...." << std::endl ; 
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
 
 
