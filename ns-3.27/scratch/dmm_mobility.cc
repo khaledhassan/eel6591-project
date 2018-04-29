@@ -34,7 +34,7 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
 
-const uint32_t numUEs = 2;
+const uint32_t numUEs = 10;
 
 Time m_ueHandoverStart[numUEs];
 Time m_enbHandoverStart[numUEs];
@@ -142,7 +142,7 @@ CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
 {
   Vector pos = mobility->GetPosition ();
   Vector vel = mobility->GetVelocity ();
-  std::cout << Simulator::Now () << ", model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+  std::cout << int(Simulator::Now().GetSeconds()) << "s, model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
             << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
             << ", z=" << vel.z << std::endl;
 }
@@ -154,15 +154,16 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
+
   /*
   LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  LogComponentEnable ("LteHelper", logLevel);
-  LogComponentEnable ("EpcHelper", logLevel);
-  LogComponentEnable ("EmuEpcHelper", logLevel);
-  LogComponentEnable ("EpcEnbApplication", logLevel);
-  LogComponentEnable ("EpcX2", logLevel);
-  LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  // LogComponentEnable ("LteHelper", logLevel);
+  // LogComponentEnable ("EpcHelper", logLevel);
+  // LogComponentEnable ("EmuEpcHelper", logLevel);
+  // LogComponentEnable ("EpcEnbApplication", logLevel);
+  // LogComponentEnable ("EpcX2", logLevel);
+  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
 
   LogComponentEnable ("LteEnbRrc", logLevel);
   LogComponentEnable ("LteEnbNetDevice", logLevel);
@@ -170,7 +171,9 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteUeNetDevice", logLevel);
   LogComponentEnable ("MobilityHelper", logLevel);
   LogComponentEnable ("LteHexGridEnbTopologyHelper", LOG_LEVEL_ALL);
+  LogComponentEnable ("UdpClient", logLevel);
 
+  LogComponentEnable ("A3RsrpHandoverAlgorithm", LOG_LEVEL_ALL);
   LogComponentEnable ("UdpClient", logLevel);
   LogComponentEnable ("UdpTraceClient", logLevel);
   LogComponentEnable ("UdpServer", logLevel);
@@ -184,14 +187,14 @@ main (int argc, char *argv[])
   // arguments, so that the user is allowed to override these settings
   Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (10)));
   Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
-  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (false));
 
   // Command line arguments
   CommandLine cmd;
 
-  double speed = 20;       // m/s
+  double speed = 100;       // m/s
   double enbTxPowerDbm = 25.0;
-  double simTime = 2; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 50; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
@@ -207,13 +210,19 @@ main (int argc, char *argv[])
   Ptr<PointToPointEpcHelper> epcHelper = CreateObject<PointToPointEpcHelper> ();
   lteHelper->SetEpcHelper (epcHelper);
   lteHelper->SetSchedulerType ("ns3::RrFfMacScheduler");
-  lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel"); // necessary for lte-hex-grid-enb-topology-helper!!!
+  //lteHelper->SetEnbAntennaModelType("ns3::CosineAntennaModel"); // FIXME: necessary for lte-hex-grid-enb-topology-helper!!!
 
-  //  lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
-  //  lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
+  // lteHelper->SetHandoverAlgorithmType ("ns3::A3RsrpHandoverAlgorithm");
+  // lteHelper->SetHandoverAlgorithmAttribute ("Hysteresis",
   //                                            DoubleValue (3.0));
-  //  lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
-  //                                            TimeValue (MilliSeconds (256)));
+  // lteHelper->SetHandoverAlgorithmAttribute ("TimeToTrigger",
+  //                                            TimeValue (MilliSeconds (300)));
+
+  lteHelper->SetHandoverAlgorithmType ("ns3::A2A4RsrqHandoverAlgorithm");
+  lteHelper->SetHandoverAlgorithmAttribute ("ServingCellThreshold",
+                                            UintegerValue (30));
+  lteHelper->SetHandoverAlgorithmAttribute ("NeighbourCellOffset",
+                                            UintegerValue (1));
 
   Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
 
@@ -267,12 +276,20 @@ main (int argc, char *argv[])
  ***********************************************************/
   //ltehexgridEnbTopologyHelper does not set the mobility model, this is not a nice way to do that but it works
   MobilityHelper enbMobility; 
+  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+    "MinX", DoubleValue (0.0),
+    "MinY", DoubleValue (0.0),
+    "DeltaX", DoubleValue (500.0),
+    "DeltaY", DoubleValue (500.0),
+    "GridWidth", UintegerValue (6),
+    "LayoutType", StringValue ("RowFirst"));
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   enbMobility.Install (enbNodes); 
+  enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
 
-  Ptr<LteHexGridEnbTopologyHelper> enbGridHelper = CreateObject<LteHexGridEnbTopologyHelper> ();
-  enbGridHelper->SetLteHelper(lteHelper);
-  enbLteDevs = enbGridHelper->SetPositionAndInstallEnbDevice(enbNodes); // replaced lteHelper->installNodes
+  //Ptr<LteHexGridEnbTopologyHelper> enbGridHelper = CreateObject<LteHexGridEnbTopologyHelper> ();
+  //enbGridHelper->SetLteHelper(lteHelper);
+  //enbLteDevs = enbGridHelper->SetPositionAndInstallEnbDevice(enbNodes); // replaced lteHelper->installNodes
 
   for (NodeContainer::Iterator j = enbNodes.Begin ();
        j != enbNodes.End (); ++j)
@@ -281,7 +298,7 @@ main (int argc, char *argv[])
       Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
       NS_ASSERT (position != 0);
       Vector pos = position->GetPosition ();
-      std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+      std::cout << "eNB position x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
     }
   
 
@@ -292,15 +309,27 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (5.0),
-    "DeltaY", DoubleValue (10.0),
-    "GridWidth", UintegerValue (3),
+    "DeltaX", DoubleValue (500.0),
+    "DeltaY", DoubleValue (500.0),
+    "GridWidth", UintegerValue (6),
     "LayoutType", StringValue ("RowFirst"));
+  
   ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-    "Time", TimeValue (Seconds (1.0)),
+    "Time", TimeValue (Seconds (10.0)),
+    "Speed",StringValue ("ns3::UniformRandomVariable[Min=10.0|Max=50.0]"),
     "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
-    "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
+    "Bounds", RectangleValue (Rectangle (0, 2501, 0, 1001)));
+  
   ueMobility.Install (ueNodes);
+  // ueMobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
+  // ueMobility.Install (ueNodes);
+  // for (uint32_t u = 0; u < numUEs; ++u)
+  //   {
+  //     ueNodes.Get (u)->GetObject<MobilityModel> ()->SetPosition (Vector (0, 50.0, 0));
+  //     ueNodes.Get (u)->GetObject<ConstantVelocityMobilityModel> ()->SetVelocity (Vector (speed, 0, 0));
+  //   }
+
+  //ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
   
@@ -310,24 +339,25 @@ main (int argc, char *argv[])
 /***********************************************************
  * Add X2 interfaces to eNBs                               *
  ***********************************************************/
+  lteHelper->AddX2Interface (enbNodes);
 //Based on the topology in the paper, we connect each enodebs in each network
-  lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
-  lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
+  // lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
+  // lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
 
-  lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
-  lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
+  // lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
+  // lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
 
-  lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
-  lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
+  // lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
+  // lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
 
-  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
-  lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
+  // lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
+  // lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
 
-  lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
-  lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
+  // lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
+  // lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
 
-  lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
-  lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+  // lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
+  // lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
 
 //  lte.SetFadingModel("");
 //  lte.SetHandoverAlgorithmType(""); //TODO/XXX

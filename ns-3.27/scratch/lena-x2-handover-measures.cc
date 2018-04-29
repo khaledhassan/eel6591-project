@@ -32,7 +32,7 @@ using namespace ns3;
 NS_LOG_COMPONENT_DEFINE ("LenaX2HandoverMeasures");
 
 
-const uint16_t numberOfUes = 10;
+const uint16_t numberOfUes = 2;
 
 Time m_ueHandoverStart[numberOfUes];
 Time m_enbHandoverStart[numberOfUes];
@@ -135,6 +135,15 @@ NotifyHandoverEndOkEnb (std::string context,
             << " with UE" << imsi << "Delay: "<< delay.GetSeconds()*1000 << "ms" << std::endl;
 }
 
+static void
+CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
+{
+  Vector pos = mobility->GetPosition ();
+  Vector vel = mobility->GetVelocity ();
+  std::cout << int(Simulator::Now().GetSeconds()) << "s, model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+            << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
+            << ", z=" << vel.z << std::endl;
+}
 
 /**
  * Sample simulation script for an automatic X2-based handover based on the RSRQ measures.
@@ -165,7 +174,7 @@ main (int argc, char *argv[])
   uint16_t numBearersPerUe = 0;
   double distance = 500.0; // m
   double yForUe = 500.0;   // m
-  double speed = 20;       // m/s
+  double speed = 100;       // m/s
   double simTime = (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
   double enbTxPowerDbm = 46.0;
 
@@ -368,6 +377,10 @@ main (int argc, char *argv[])
   rlcStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
   Ptr<RadioBearerStatsCalculator> pdcpStats = lteHelper->GetPdcpStats ();
   pdcpStats->SetAttribute ("EpochDuration", TimeValue (Seconds (1.0)));
+
+  // Output every time position changes
+  Config::Connect ("/NodeList/*/$ns3::MobilityModel/CourseChange",
+                  MakeCallback (&CourseChange));
 
   // connect custom trace sinks for RRC connection establishment and handover notification
   Config::Connect ("/NodeList/*/DeviceList/*/LteEnbRrc/ConnectionEstablished",
