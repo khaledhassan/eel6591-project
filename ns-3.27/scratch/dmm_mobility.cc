@@ -27,14 +27,14 @@
 #include "ns3/lte-net-device.h"
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-handover-algorithm.h"
-
+#include "ns3/netanim-module.h"
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
 
-const uint32_t numUEs = 2;
+const uint32_t numUEs = 20;
 
 Time m_ueHandoverStart[numUEs];
 Time m_enbHandoverStart[numUEs];
@@ -194,12 +194,12 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
-  double simTime = 2; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double simTime = 5; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
-
+  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
   cmd.Parse (argc, argv);
 
 
@@ -394,6 +394,30 @@ main (int argc, char *argv[])
       EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
     }
+
+//An animation for the project
+AnimationInterface anim (animFile);
+
+  for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
+      anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
+   }
+
+  for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (enbNodes.Get (i), "ENB");
+      anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
+    }
+
+  anim.EnablePacketMetadata ();
+  anim.SetMobilityPollInterval (Seconds (0.0001));
+ //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
+  //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+
+  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+
 
 /***********************************************************
  * Run simulation                                          *
