@@ -28,17 +28,15 @@
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-handover-algorithm.h"
 #include "ns3/netanim-module.h"
+#include "ns3/nstime.h"
+
 
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
-
-const uint32_t numUEs = 20;
-
-Time m_ueHandoverStart[numUEs];
-Time m_enbHandoverStart[numUEs];
-
+std::vector<Time> m_ueHandoverStart;
+std::vector<Time> m_enbHandoverStart;
 
 void
 NotifyConnectionEstablishedUe (std::string context,
@@ -142,8 +140,8 @@ CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
 {
   Vector pos = mobility->GetPosition ();
   Vector vel = mobility->GetVelocity ();
-  std::cout << Simulator::Now () << ", model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
-            << ", z=" << pos.z << "; VEL:" << vel.x << ", y=" << vel.y
+  std::cout << float(Simulator::Now().GetMilliSeconds ())/1000 << "s, model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+            << ", z=" << pos.z << "; VEL: x=" << vel.x << ", y=" << vel.y
             << ", z=" << vel.z << std::endl;
 }
 
@@ -151,36 +149,36 @@ int
 main (int argc, char *argv[])
 {
 
+
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
+  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
 
-  /*
-  LogLevel logLevel = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogComponentEnable ("LteHelper", logLevelLTE);
+  LogComponentEnable ("EpcHelper", logLevelLTE);
+  LogComponentEnable ("EmuEpcHelper", logLevelLTE);
+  LogComponentEnable ("EpcEnbApplication", logLevelLTE);
+  LogComponentEnable ("EpcSgwPgwApplication", logLevelLTE);
 
-  // LogComponentEnable ("LteHelper", logLevel);
-  // LogComponentEnable ("EpcHelper", logLevel);
-  // LogComponentEnable ("EmuEpcHelper", logLevel);
-  // LogComponentEnable ("EpcEnbApplication", logLevel);
-  // LogComponentEnable ("EpcX2", logLevel);
-  // LogComponentEnable ("EpcSgwPgwApplication", logLevel);
+  LogComponentEnable ("LteEnbRrc", logLevelLTE);
+  LogComponentEnable ("LteEnbNetDevice", logLevelLTE);
+  LogComponentEnable ("LteUeRrc", logLevelLTE);
+  LogComponentEnable ("LteUeNetDevice", logLevelLTE);
 
-  // LogComponentEnable ("LteEnbRrc", logLevel);
-  // LogComponentEnable ("LteEnbNetDevice", logLevel);
-  // LogComponentEnable ("LteUeRrc", logLevel);
-  // LogComponentEnable ("LteUeNetDevice", logLevel);
-  // LogComponentEnable ("MobilityHelper", logLevel);
+  LogComponentEnable ("EpcX2", logLevelMobility);
+  LogComponentEnable ("MobilityHelper", logLevelMobility);
+  LogComponentEnable ("A3RsrpHandoverAlgorithm", logLevelMobility);
 
-  // LogComponentEnable ("UdpClient", logLevel);
+  LogComponentEnable ("UdpClient", logLevelUDP);
+  LogComponentEnable ("UdpTraceClient", logLevelUDP);
+  LogComponentEnable ("UdpServer", logLevelUDP);
+  LogComponentEnable ("UdpEchoClientApplication", logLevelUDP);
+  LogComponentEnable ("UdpEchoServerApplication", logLevelUDP);
 
-  LogComponentEnable ("A3RsrpHandoverAlgorithm", LOG_LEVEL_ALL);
-  LogComponentEnable ("UdpClient", logLevel);
-  LogComponentEnable ("UdpTraceClient", logLevel);
-  LogComponentEnable ("UdpServer", logLevel);
-  */
   Time::SetResolution (Time::NS);
-  LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
-  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
 
   // change some default attributes so that they are reasonable for
   // this scenario, but do this before processing command line
@@ -194,14 +192,22 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
-  double simTime = 5; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  
+  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
+  double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
+  double cellSize = 500; // m
+  uint32_t numUEs = 2;
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
-  cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 15)", simTime);
-  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
+  cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 100)", simTime);
+  cmd.AddValue ("cellSize", "Cell grid spacing in X and Y (in meters, default = 500)", cellSize);
+  cmd.AddValue ("numUEs", "Number of UEs (default = 2)", numUEs);
+
   cmd.Parse (argc, argv);
 
+  m_ueHandoverStart.reserve(numUEs);
+  m_enbHandoverStart.reserve(numUEs);
 
 /***********************************************************
  * Create LTE, EPC, and UE/eNB Nodes                       *
@@ -267,16 +273,25 @@ main (int argc, char *argv[])
  * Requires setting up mobility models for UEs and eNBs    *
  ***********************************************************/
   // Install Mobility Model in eNB
-  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < 18; i++)
-    {
-      Vector enbPosition (i*10, i*10, 0); // TODO/XXX: must fix this
-      enbPositionAlloc->Add (enbPosition);
-    }
   MobilityHelper enbMobility;
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  enbMobility.SetPositionAllocator (enbPositionAlloc);
+  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+    "MinX", DoubleValue (0.0),
+    "MinY", DoubleValue (0.0),
+    "DeltaX", DoubleValue (cellSize),
+    "DeltaY", DoubleValue (cellSize),
+    "GridWidth", UintegerValue (3),
+    "LayoutType", StringValue ("RowFirst"));
   enbMobility.Install (enbNodes);
+
+  for (NodeContainer::Iterator j = enbNodes.Begin (); j != enbNodes.End (); ++j)
+    {
+      Ptr<Node> object = *j;
+      Ptr<MobilityModel> position = object->GetObject<MobilityModel> ();
+      NS_ASSERT (position != 0);
+      Vector pos = position->GetPosition ();
+      std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
+    }
 
 /***********************************************************
  * Attach RandomWalk Mobility to UEs                       *
@@ -285,14 +300,18 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (5.0),
-    "DeltaY", DoubleValue (10.0),
+    "DeltaX", DoubleValue (cellSize*0.75),
+    "DeltaY", DoubleValue (cellSize*0.75),
     "GridWidth", UintegerValue (3),
     "LayoutType", StringValue ("RowFirst"));
-  ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-    "Time", TimeValue (Seconds (1.0)),
-    "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
-    "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
+  // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+  //   "Time", TimeValue (Seconds (1.0)),
+  //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
+  //   "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
+  ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
+                              "Bounds", RectangleValue (Rectangle (-cellSize, (18/3)*cellSize, -cellSize, (3)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
+                              "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=100]"),
+                              "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
