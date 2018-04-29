@@ -167,6 +167,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteEnbNetDevice", logLevelLTE);
   LogComponentEnable ("LteUeRrc", logLevelLTE);
   LogComponentEnable ("LteUeNetDevice", logLevelLTE);
+  LogComponentEnable ("TraceFadingLossModel", LOG_LEVEL_ALL);
 
   LogComponentEnable ("EpcX2", logLevelMobility);
   LogComponentEnable ("MobilityHelper", logLevelMobility);
@@ -195,14 +196,20 @@ main (int argc, char *argv[])
   
   std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
   double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
-  double cellSize = 500; // m
+  int cellSize = 500; // m
   uint32_t numUEs = 2;
+  uint32_t numENBs = 18;
+  double enbHeight = 15;
+  uint32_t gridWidth = 3;
 
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 100)", simTime);
   cmd.AddValue ("cellSize", "Cell grid spacing in X and Y (in meters, default = 500)", cellSize);
   cmd.AddValue ("numUEs", "Number of UEs (default = 2)", numUEs);
+  cmd.AddValue ("numENBs", "Number of eNBs (default = 18)", numENBs);
+  cmd.AddValue ("enbHeight", "Height of eNBs (default = 2)", enbHeight);
+  cmd.AddValue ("gridWidth", "number of eNBs in X dimension", gridWidth);
 
   cmd.Parse (argc, argv);
 
@@ -234,7 +241,7 @@ main (int argc, char *argv[])
 
 //create 18 eNodeBs
   NodeContainer enbNodes;
-  enbNodes.Create(18);
+  enbNodes.Create(numENBs);
   NetDeviceContainer enbLteDevs;
 
 
@@ -275,15 +282,25 @@ main (int argc, char *argv[])
   // Install Mobility Model in eNB
   MobilityHelper enbMobility;
   enbMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-    "MinX", DoubleValue (0.0),
-    "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (cellSize),
-    "DeltaY", DoubleValue (cellSize),
-    "GridWidth", UintegerValue (3),
-    "LayoutType", StringValue ("RowFirst"));
+  // enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+  //   "MinX", DoubleValue (0.0),
+  //   "MinY", DoubleValue (0.0),
+  //   "DeltaX", DoubleValue (cellSize),
+  //   "DeltaY", DoubleValue (cellSize),
+  //   "GridWidth", UintegerValue (gridWidth),
+  //   "LayoutType", StringValue ("RowFirst"));
+  // enbMobility.Install (enbNodes);
+
+  Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < numENBs; i++)
+    {
+      Vector enbPosition (i*cellSize%int(gridWidth*cellSize), i*cellSize%int((numENBs/gridWidth*cellSize)), enbHeight); // 
+      enbPositionAlloc->Add (enbPosition);
+    }
+  enbMobility.SetPositionAllocator (enbPositionAlloc);
   enbMobility.Install (enbNodes);
 
+  // Display positions of eNBs in XYZ dimension
   for (NodeContainer::Iterator j = enbNodes.Begin (); j != enbNodes.End (); ++j)
     {
       Ptr<Node> object = *j;
@@ -292,7 +309,7 @@ main (int argc, char *argv[])
       Vector pos = position->GetPosition ();
       std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
     }
-
+  
 /***********************************************************
  * Attach RandomWalk Mobility to UEs                       *
  ***********************************************************/
@@ -302,14 +319,14 @@ main (int argc, char *argv[])
     "MinY", DoubleValue (0.0),
     "DeltaX", DoubleValue (cellSize*0.75),
     "DeltaY", DoubleValue (cellSize*0.75),
-    "GridWidth", UintegerValue (3),
+    "GridWidth", UintegerValue (gridWidth),
     "LayoutType", StringValue ("RowFirst"));
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
   //   "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
   ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
-                              "Bounds", RectangleValue (Rectangle (-cellSize, (18/3)*cellSize, -cellSize, (3)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
+                              "Bounds", RectangleValue (Rectangle (-cellSize, (numENBs/gridWidth)*cellSize, -cellSize, (gridWidth)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
                               "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=100]"),
                               "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
   ueMobility.Install (ueNodes);
