@@ -27,6 +27,7 @@
 #include "ns3/lte-net-device.h"
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-handover-algorithm.h"
+#include "ns3/netanim-module.h"
 #include "ns3/nstime.h"
 
 
@@ -191,6 +192,8 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
+  
+  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
   double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
   double cellSize = 500; // m
   uint32_t numUEs = 2;
@@ -366,14 +369,17 @@ main (int argc, char *argv[])
   startTimeSeconds->SetAttribute ("Min", DoubleValue (0.5));
   startTimeSeconds->SetAttribute ("Max", DoubleValue (0.600));
 
-  ApplicationContainer clientApps; // for UEs
-  ApplicationContainer serverApps; // on remoteHost
+  ApplicationContainer ueApps; // for UEs
+  ApplicationContainer remoteHostApps; // on remoteHost
 
-  std::vector<UdpServerHelper> servers;
+  std::vector<UdpServerHelper> remoteHostServers;
+  std::vector<UdpServerHelper> ueServers;
+
 
   for (uint32_t u = 0; u < numUEs; ++u)
     {
       Ptr<Node> ue = ueNodes.Get (u);
+      Ipv4Address ueIpAddress = ueIpIfaces.GetAddress(u);
       // Set the default gateway for the UE
       Ptr<Ipv4StaticRouting> ueStaticRouting = ipv4RoutingHelper.GetStaticRouting (ue->GetObject<Ipv4> ());
       ueStaticRouting->SetDefaultRoute (epcHelper->GetUeDefaultGatewayAddress (), 1);
@@ -382,21 +388,20 @@ main (int argc, char *argv[])
 
       Time startTime = Seconds (startTimeSeconds->GetValue ());
 
-      NS_LOG_LOGIC ("installing UDP Client+Server for UE " << u);
-
-      // set up new server just for this client and attach it to the remoteHost
-      UdpServerHelper server (port);
-      ApplicationContainer thisServer = server.Install (remoteHost);
+      NS_LOG_LOGIC ("installing UDP Client for UE + Server for remoteHost" << u);
+      // set up new rhServer just for this ueClient and attach it to the remoteHost
+      UdpServerHelper rhServer (port);
+      ApplicationContainer thisServer = rhServer.Install (remoteHost);
       thisServer.Start(startTime);
-      serverApps.Add(thisServer);
-      servers.push_back(server);
+      remoteHostApps.Add(thisServer);
+      remoteHostServers.push_back(rhServer);
 
-      // set up a client for this UE to connect to it's server
-      UdpTraceClientHelper client(remoteHostAddr, port, "");
-      client.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
-      ApplicationContainer thisClient = client.Install(ue);
+      // set up a ueClient for this UE to connect to it's rhServer
+      UdpTraceClientHelper ueClient(remoteHostAddr, port, "");
+      ueClient.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
+      ApplicationContainer thisClient = ueClient.Install(ue);
       thisClient.Start(startTime);
-      clientApps.Add(thisClient);
+      ueApps.Add(thisClient);
 
       Ptr<EpcTft> tft = Create<EpcTft> ();
       EpcTft::PacketFilter dlpf;
@@ -409,7 +414,59 @@ main (int argc, char *argv[])
       tft->Add (ulpf);
       EpsBearer bearer (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer, tft);
+
+      ++port;
+      NS_LOG_LOGIC ("installing UDP Client for remoteHost + Server for UE" << u);
+      // set up new ueServer just for this ueClient and attach it to the remoteHost
+      UdpServerHelper ueServer (port);
+      ApplicationContainer thisServer2 = ueServer.Install (ue);
+      thisServer2.Start(startTime);
+      ueApps.Add(thisServer2);
+      ueServers.push_back(ueServer);
+
+      // set up a ueClient for this UE to connect to it's rhServer
+      UdpTraceClientHelper rhClient(ueIpAddress, port, "");
+      rhClient.SetAttribute ("MaxPacketSize", UintegerValue (1024)); // XXX/TODO: make this a parameter?
+      ApplicationContainer thisClient2 = rhClient.Install(remoteHost);
+      thisClient2.Start(startTime);
+      ueApps.Add(thisClient2);
+
+      Ptr<EpcTft> tft2 = Create<EpcTft> ();
+      EpcTft::PacketFilter dlpf2;
+      dlpf2.localPortStart = port;
+      dlpf2.localPortEnd = port;
+      tft2->Add (dlpf2);
+      EpcTft::PacketFilter ulpf2;
+      ulpf2.remotePortStart = port;
+      ulpf2.remotePortEnd = port;
+      tft2->Add (ulpf2);
+      EpsBearer bearer2 (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
+      lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer2, tft2);
     }
+
+//An animation for the project
+AnimationInterface anim (animFile);
+
+  for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
+      anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
+   }
+
+  for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (enbNodes.Get (i), "ENB");
+      anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
+    }
+
+  anim.EnablePacketMetadata ();
+  anim.SetMobilityPollInterval (Seconds (0.0001));
+ //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
+  //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+
+  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+
 
 /***********************************************************
  * Run simulation                                          *
@@ -454,10 +511,16 @@ main (int argc, char *argv[])
   */
  std::vector<UdpServerHelper>::iterator i;
  uint32_t u;
- for (u = 1, i = servers.begin(); i != servers.end(); i++, u++)
+ for (u = 1, i = remoteHostServers.begin(); i != remoteHostServers.end(); i++, u++)
     {
-      std::cout << "Server for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
-      std::cout << "Server for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+      std::cout << "rhServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
+      std::cout << "rhServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+    }
+
+ for (u = 1, i = ueServers.begin(); i != ueServers.end(); i++, u++)
+    {
+      std::cout << "ueServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
+      std::cout << "ueServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
     }
 
   return 0;
