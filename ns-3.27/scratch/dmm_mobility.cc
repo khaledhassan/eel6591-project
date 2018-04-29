@@ -234,9 +234,11 @@ main (int argc, char *argv[])
 
 //create 18 eNodeBs
   NodeContainer enbNodes;
-  enbNodes.Create(18);
+  enbNodes.Create(2);
+  NodeContainer transitEnbNodes;
+  transitEnbNodes.Create(1);
   NetDeviceContainer enbLteDevs;
-
+  NetDeviceContainer transitEnbLteDevs;
 
 /***********************************************************
  * Create Internet and IP addresses for non-LTE devices    *
@@ -284,6 +286,16 @@ main (int argc, char *argv[])
     "LayoutType", StringValue ("RowFirst"));
   enbMobility.Install (enbNodes);
 
+  enbMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
+    "MinX", DoubleValue (777769000.0), // "I LTE you to the moon and back"
+    "MinY", DoubleValue (777769000.0),
+    "DeltaX", DoubleValue (cellSize),
+    "DeltaY", DoubleValue (cellSize),
+    "GridWidth", UintegerValue (3),
+    "LayoutType", StringValue ("RowFirst"));
+  enbMobility.Install (transitEnbNodes);
+
+
   for (NodeContainer::Iterator j = enbNodes.Begin (); j != enbNodes.End (); ++j)
     {
       Ptr<Node> object = *j;
@@ -294,28 +306,44 @@ main (int argc, char *argv[])
     }
 
 /***********************************************************
- * Attach RandomWalk Mobility to UEs                       *
+ * Attach Waypoint Mobility to UEs                         *
  ***********************************************************/
   MobilityHelper ueMobility;
-  ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
-    "MinX", DoubleValue (0.0),
-    "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (cellSize*0.75),
-    "DeltaY", DoubleValue (cellSize*0.75),
-    "GridWidth", UintegerValue (3),
-    "LayoutType", StringValue ("RowFirst"));
+  Ptr<ListPositionAllocator> uePositionAlloc = CreateObject<ListPositionAllocator> ();
+  for (uint16_t i = 0; i < ueNodes.GetN(); i++)
+    {
+      Vector uePosition (10, 10, 0);
+      uePositionAlloc->Add (uePosition);
+    }
+  ueMobility.SetPositionAllocator (uePositionAlloc);
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
   //   "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
-  ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
-                              "Bounds", RectangleValue (Rectangle (-cellSize, (18/3)*cellSize, -cellSize, (3)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
-                              "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=100]"),
-                              "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
+  ueMobility.SetMobilityModel ("ns3::WaypointMobilityModel");
   ueMobility.Install (ueNodes);
+  for (uint16_t i = 0; i < ueNodes.GetN(); i++)
+    {
+      Ptr<WaypointMobilityModel> ueWaypointMobility = DynamicCast<WaypointMobilityModel>( ueNodes.Get(i)->GetObject<MobilityModel>());
+      ueWaypointMobility->AddWaypoint(
+        Waypoint(
+          Time(Seconds(0)),
+          Vector(10, 10, 0)
+        )
+      );
+
+      ueWaypointMobility->AddWaypoint(
+        Waypoint(
+          Time(Seconds(simTime/2)),
+          Vector(2*cellSize+10, 10, 0)
+        )
+      );
+    }
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
   enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
+  transitEnbLteDevs = lteHelper->InstallEnbDevice (transitEnbNodes);
+
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
 
 
@@ -323,23 +351,9 @@ main (int argc, char *argv[])
  * Add X2 interfaces to eNBs                               *
  ***********************************************************/
 //Based on the topology in the paper, we connect each enodebs in each network
-  lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
-  lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
-
-  lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
-  lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
-
-  lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
-  lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
-
-  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
-  lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
-
-  lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
-  lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
-
-  lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
-  lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+  lteHelper->AddX2Interface(enbNodes.Get(0),  transitEnbNodes.Get(0));
+  lteHelper->AddX2Interface(enbNodes.Get(1),  transitEnbNodes.Get(0));
+//  lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
 
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
