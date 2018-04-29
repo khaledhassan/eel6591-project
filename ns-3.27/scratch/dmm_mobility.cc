@@ -27,6 +27,7 @@
 #include "ns3/lte-net-device.h"
 #include "ns3/lte-ue-net-device.h"
 #include "ns3/lte-handover-algorithm.h"
+#include "ns3/netanim-module.h"
 #include "ns3/nstime.h"
 
 
@@ -191,6 +192,8 @@ main (int argc, char *argv[])
 
   double speed = 20;       // m/s
   double enbTxPowerDbm = 25.0;
+  
+  std::string animFile = "ProjectAnimation.xml" ;  // Name of file for animation output
   double simTime = 100; //TODO/XXX old value: (double)(numberOfEnbs + 1) * distance / speed; // 1500 m / 20 m/s = 75 secs
   double cellSize = 500; // m
   uint32_t numUEs = 2;
@@ -440,6 +443,30 @@ main (int argc, char *argv[])
       EpsBearer bearer2 (EpsBearer::NGBR_VIDEO_TCP_DEFAULT);
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer2, tft2);
     }
+
+//An animation for the project
+AnimationInterface anim (animFile);
+
+  for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
+      anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
+   }
+
+  for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
+    {
+      anim.UpdateNodeDescription (enbNodes.Get (i), "ENB");
+      anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
+    }
+
+  anim.EnablePacketMetadata ();
+  anim.SetMobilityPollInterval (Seconds (0.0001));
+ //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
+  //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+
+  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+
 
 /***********************************************************
  * Run simulation                                          *
