@@ -165,7 +165,7 @@ main (int argc, char *argv[])
 
 
 /***********************************************************
- * Log level and coommand line parsing                     *
+ * Log level and command line parsing                      *
  ***********************************************************/
   LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_ERROR);
   LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
@@ -256,30 +256,22 @@ main (int argc, char *argv[])
   lteHelper->SetFadingModelAttribute ("WindowSize", TimeValue (Seconds (0.5)));
   lteHelper->SetFadingModelAttribute ("RbNum", UintegerValue (100));
 
+  Ptr<Node> pgw = epcHelper->GetPgwNode ();
 
-
-
-  Ptr<Node> pgw = epcHelper->GetPgwNode (); // TODO/XXX: used later?
-
-
-//creates 20 nodes we can use as mobile nodes
   NodeContainer ueNodes;
   ueNodes.Create (numUEs);
   NetDeviceContainer ueLteDevs;
   Ipv4InterfaceContainer ueIpIfaces;
 
-//create 18 eNodeBs
   NodeContainer enbNodes;
   enbNodes.Create(numENBs);
   NetDeviceContainer enbLteDevs;
-
 
 /***********************************************************
  * Create Internet and IP addresses for non-LTE devices    *
  ***********************************************************/
   InternetStackHelper internet;
   internet.Install(ueNodes);
-//  internet.Install(enbNodes);
   Ipv4AddressHelper ipAddresses;
   ipAddresses.SetBase ("1.0.0.0", "255.255.255.0");
 
@@ -346,16 +338,16 @@ main (int argc, char *argv[])
             << " Bounds... x=[" << -cellSize << "," << (numENBs/gridWidth)*cellSize << "] y=[" << -cellSize << ","<< (gridWidth)*cellSize << "]"<< std::endl ;
   
 /***********************************************************
- * Attach RandomWalk Mobility to UEs                       *
+ * Attach Random Direction Mobility to UEs                 *
  ***********************************************************/
   MobilityHelper ueMobility;
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (cellSize*0.75),
-    "DeltaY", DoubleValue (cellSize*0.75),
+    "DeltaX", DoubleValue (cellSize*0.5),
+    "DeltaY", DoubleValue (cellSize*0.5),
     "GridWidth", UintegerValue (gridWidth),
-    "LayoutType", StringValue ("RowFirst"));
+    "LayoutType", StringValue ("ColumnFirst"));
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
@@ -408,9 +400,6 @@ main (int argc, char *argv[])
   }
 
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
-//  lte.SetFadingModel("");
-//  lte.SetHandoverAlgorithmType(""); //TODO/XXX
-
 
 /***********************************************************
  * Assign IP addresses to UEs and attach them to the LTE   *
@@ -418,8 +407,7 @@ main (int argc, char *argv[])
  ***********************************************************/
 //assign UE IP addresses after the lteHelper is aware of the UE's InternetStack
   ueIpIfaces = epcHelper->AssignUeIpv4Address (ueLteDevs);
-  //lteHelper->Attach(ueLteDevs); // TODO/XXX: see issue #2
-  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs); // TODO/XXX: see issue #2
+  lteHelper->AttachToClosestEnb(ueLteDevs, enbLteDevs);
 
 
 /***********************************************************
@@ -510,8 +498,8 @@ main (int argc, char *argv[])
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer2, tft2);
     }
 
-//An animation for the project
-AnimationInterface anim (animFile);
+  //An animation for the project
+  AnimationInterface anim (animFile);
 
   for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
     {
@@ -530,12 +518,11 @@ AnimationInterface anim (animFile);
 
   anim.EnablePacketMetadata ();
   anim.SetMobilityPollInterval (Seconds (0.0001));
- //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+  //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
   //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
   //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
 
   anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
-
 
 /***********************************************************
  * Run simulation                                          *
