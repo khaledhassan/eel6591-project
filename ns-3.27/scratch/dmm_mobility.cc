@@ -575,7 +575,9 @@ AnimationInterface anim (animFile);
       std::cout << "UE Handovertime: " << it->GetSeconds()*1000 << "ms" << std::endl;
       sum+=*it;
     }
-  Time avgUEhandoverTime = sum/u;
+  Time avgUEhandoverTime = Seconds(0);
+  if (sum!=0)
+    avgUEhandoverTime = sum/u;
 
   sum = Seconds(0);
   for(u=0, it = enbHandoverTimes.begin(); it != enbHandoverTimes.end(); it++, u++ )      
@@ -584,25 +586,45 @@ AnimationInterface anim (animFile);
       std::cout << "ENB Handovertime: " << it->GetSeconds()*1000 << "ms" << std::endl;
       sum+=*it;
     }
-  Time avgENBhandoverTime = sum/u;
+  Time avgENBhandoverTime = Seconds(0);
+  if (sum!=0)
+    avgENBhandoverTime= sum/u;
 
   std::vector<UdpServerHelper>::iterator i;
-  //uint32_t u;
+  std::vector<int> totpacks;
+  float sum2 = 0;
   for (u = 1, i = remoteHostServers.begin(); i != remoteHostServers.end(); i++, u++)
     {
-      std::cout << "rhServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
-      std::cout << "rhServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+      uint32_t lost = i->GetServer()->GetLost();
+      uint32_t rec = i->GetServer()->GetReceived();
+      totpacks.push_back(lost+rec);
+      sum2+=rec;
+      std::cout << "rhServer for UE " << u << " lost " << lost << std::endl;
+      std::cout << "rhServer for UE " << u << " recieved " << rec << std::endl;
     }
 
+  std::vector<int>::iterator maxIt = std::max_element(totpacks.begin(),totpacks.end());
+  int ULavg =  float(sum2)/(float(*maxIt) * float(numUEs))*100;
+
+  totpacks.clear();
+  sum2=0;
   for (u = 1, i = ueServers.begin(); i != ueServers.end(); i++, u++)
     {
-      std::cout << "ueServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
-      std::cout << "ueServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
+      uint32_t lost = i->GetServer()->GetLost();
+      uint32_t rec = i->GetServer()->GetReceived();
+      totpacks.push_back(lost+rec);
+      sum2+=rec;
+      std::cout << "ueServer for UE " << u << " lost " << lost << std::endl;
+      std::cout << "ueServer for UE " << u << " recieved " << rec << std::endl;
     }
+  maxIt = std::max_element(totpacks.begin(),totpacks.end());
+  int DLavg =  float(sum2)/(float(*maxIt) * float(numUEs))*100;
 
   std::cout << "==============================" << std::endl << "==============================" << std::endl;
   std::cout << "Avg UE Handover time: " << avgUEhandoverTime.GetSeconds()*1000 << "ms" << std::endl;
   std::cout << "Avg ENB Handover time: " << avgUEhandoverTime.GetSeconds()*1000 << "ms" << std::endl;
+  std::cout << "Avg UL packet received: " << ULavg << "%" << std::endl;
+  std::cout << "Avg DL packet received: " << DLavg << "%" << std::endl;
 
   return 0;
 }
