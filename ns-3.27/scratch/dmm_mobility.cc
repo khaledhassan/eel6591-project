@@ -499,6 +499,9 @@ AnimationInterface anim (animFile);
       anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
     }
 
+  anim.UpdateNodeDescription(remoteHost, "Server");
+  anim.UpdateNodeColor(remoteHost, 0, 0, 255);
+
   anim.EnablePacketMetadata ();
   anim.SetMobilityPollInterval (Seconds (0.0001));
  //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
