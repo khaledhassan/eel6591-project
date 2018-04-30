@@ -37,6 +37,8 @@ NS_LOG_COMPONENT_DEFINE ("DMM_MOBILITY");
 
 std::vector<Time> m_ueHandoverStart;
 std::vector<Time> m_enbHandoverStart;
+std::vector<Time> ueHandoverTimes;
+std::vector<Time> enbHandoverTimes;
 
 void
 NotifyConnectionEstablishedUe (std::string context,
@@ -44,7 +46,8 @@ NotifyConnectionEstablishedUe (std::string context,
                                uint16_t cellid,
                                uint16_t rnti)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << " UE IMSI " << imsi
             << ": connected to CellId " << cellid
@@ -59,7 +62,8 @@ NotifyHandoverStartUe (std::string context,
                        uint16_t rnti,
                        uint16_t targetCellId)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << "s UE IMSI " << imsi
             << ": previously connected to CellId " << cellid
@@ -75,14 +79,18 @@ NotifyHandoverEndOkUe (std::string context,
                        uint16_t cellid,
                        uint16_t rnti)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << " UE IMSI " << imsi
             << ": successful handover to CellId " << cellid
             << " with RNTI " << rnti
             << std::endl;
   Time delay = Simulator::Now () - m_ueHandoverStart[imsi-1];
-  std::cout << "UE"
+  ueHandoverTimes.push_back(delay);
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
+            << "s UE"
             << imsi << " Delay: " << delay.GetSeconds()*1000 << "ms" << std::endl;
 }
 
@@ -92,7 +100,8 @@ NotifyConnectionEstablishedEnb (std::string context,
                                 uint16_t cellid,
                                 uint16_t rnti)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << " eNB CellId " << cellid
             << ": successful connection of UE with IMSI " << imsi
@@ -107,7 +116,8 @@ NotifyHandoverStartEnb (std::string context,
                         uint16_t rnti,
                         uint16_t targetCellId)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << " eNB CellId " << cellid
             << ": start handover of UE with IMSI " << imsi
@@ -123,14 +133,18 @@ NotifyHandoverEndOkEnb (std::string context,
                         uint16_t cellid,
                         uint16_t rnti)
 {
-  std::cout << int(Simulator::Now().GetSeconds())
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
             << "s "
             << " eNB CellId " << cellid
             << ": completed handover of UE with IMSI " << imsi
             << " RNTI " << rnti
             << std::endl;
   Time delay = Simulator::Now () - m_enbHandoverStart[imsi-1];
-  std::cout << "ENB"
+  enbHandoverTimes.push_back(delay);
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
+            << "s ENB"
             << cellid
             << " with UE" << imsi << "Delay: "<< delay.GetSeconds()*1000 << "ms" << std::endl;
 }
@@ -140,7 +154,7 @@ CourseChange (std::string foo, Ptr<const MobilityModel> mobility)
 {
   Vector pos = mobility->GetPosition ();
   Vector vel = mobility->GetVelocity ();
-  std::cout << float(Simulator::Now().GetMilliSeconds ())/1000 << "s, model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
+  std::cout << "+" << Simulator::Now ().GetSeconds () << "s, model=" << mobility << ", POS: x=" << pos.x << ", y=" << pos.y
             << ", z=" << pos.z << "; VEL: x=" << vel.x << ", y=" << vel.y
             << ", z=" << vel.z << std::endl;
 }
@@ -153,9 +167,9 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
-  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
-  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
-  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
+  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
+  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
 
   LogComponentEnable ("LteHelper", logLevelLTE);
   LogComponentEnable ("EpcHelper", logLevelLTE);
@@ -302,10 +316,15 @@ main (int argc, char *argv[])
   // enbMobility.Install (enbNodes);
 
   Ptr<ListPositionAllocator> enbPositionAlloc = CreateObject<ListPositionAllocator> ();
-  for (uint16_t i = 0; i < numENBs; i++)
+  for (uint16_t i = 0; i < gridWidth; i++)
     {
-      Vector enbPosition (i*cellSize%int(gridWidth*cellSize), i*cellSize%int((numENBs/gridWidth*cellSize)), enbHeight); // 
-      enbPositionAlloc->Add (enbPosition);
+      for (uint16_t t = 0 ; t < numENBs/gridWidth; t++)
+        {
+          Vector enbPosition (t*cellSize, i*cellSize, enbHeight); // 
+          enbPositionAlloc->Add (enbPosition);
+        }
+      // Vector enbPosition (i*cellSize%int(gridWidth*cellSize), i*cellSize%int((numENBs/gridWidth*cellSize)), enbHeight); // 
+      // enbPositionAlloc->Add (enbPosition);
     }
   enbMobility.SetPositionAllocator (enbPositionAlloc);
   enbMobility.Install (enbNodes);
@@ -319,6 +338,9 @@ main (int argc, char *argv[])
       Vector pos = position->GetPosition ();
       std::cout << "x=" << pos.x << ", y=" << pos.y << ", z=" << pos.z << std::endl;
     }
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
+            << " Bounds... x=[" << -cellSize << "," << (numENBs/gridWidth)*cellSize << "] y=[" << -cellSize << ","<< (gridWidth)*cellSize << "]"<< std::endl ;
   
 /***********************************************************
  * Attach RandomWalk Mobility to UEs                       *
@@ -344,9 +366,13 @@ main (int argc, char *argv[])
   ueMobility.Install (ueNodes);
 
   Config::SetDefault ("ns3::LteEnbPhy::TxPower", DoubleValue (enbTxPowerDbm));
-  std::cout << "INSTALLING ENBs with lteHelper...." << std::endl ; 
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
+            << " INSTALLING ENBs with lteHelper...." << std::endl ; 
   enbLteDevs = lteHelper->InstallEnbDevice (enbNodes);
-  std::cout << "INSTALLING UEs with lteHelper...." << std::endl ; 
+  std::cout << "+"
+            << Simulator::Now().GetSeconds()
+            << " INSTALLING UEs with lteHelper...." << std::endl ; 
   ueLteDevs = lteHelper->InstallUeDevice (ueNodes);
 
 
@@ -540,19 +566,43 @@ AnimationInterface anim (animFile);
     NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetLost (), 0, "Packets were lost !");
     NS_TEST_ASSERT_MSG_EQ (server.GetServer ()->GetReceived (), 247, "Did not receive expected number of packets !");
   */
- std::vector<UdpServerHelper>::iterator i;
- uint32_t u;
- for (u = 1, i = remoteHostServers.begin(); i != remoteHostServers.end(); i++, u++)
+  std::vector<Time>::iterator it;
+  uint32_t u;
+  Time sum;
+  for(u = 0, it = ueHandoverTimes.begin(); it != ueHandoverTimes.end(); it++, u++ )    
+    {
+      // found nth element..print and break.
+      std::cout << "UE Handovertime: " << it->GetSeconds()*1000 << "ms" << std::endl;
+      sum+=*it;
+    }
+  Time avgUEhandoverTime = sum/u;
+
+  sum = Seconds(0);
+  for(u=0, it = enbHandoverTimes.begin(); it != enbHandoverTimes.end(); it++, u++ )      
+    {
+      // found nth element..print and break.
+      std::cout << "ENB Handovertime: " << it->GetSeconds()*1000 << "ms" << std::endl;
+      sum+=*it;
+    }
+  Time avgENBhandoverTime = sum/u;
+
+  std::vector<UdpServerHelper>::iterator i;
+  //uint32_t u;
+  for (u = 1, i = remoteHostServers.begin(); i != remoteHostServers.end(); i++, u++)
     {
       std::cout << "rhServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
       std::cout << "rhServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
     }
 
- for (u = 1, i = ueServers.begin(); i != ueServers.end(); i++, u++)
+  for (u = 1, i = ueServers.begin(); i != ueServers.end(); i++, u++)
     {
       std::cout << "ueServer for UE " << u << " lost " << i->GetServer()->GetLost() << std::endl;
       std::cout << "ueServer for UE " << u << " recieved " << i->GetServer()->GetReceived() << std::endl;
     }
+
+  std::cout << "==============================" << std::endl << "==============================" << std::endl;
+  std::cout << "Avg UE Handover time: " << avgUEhandoverTime.GetSeconds()*1000 << "ms" << std::endl;
+  std::cout << "Avg ENB Handover time: " << avgUEhandoverTime.GetSeconds()*1000 << "ms" << std::endl;
 
   return 0;
 }
