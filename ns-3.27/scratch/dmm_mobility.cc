@@ -167,9 +167,9 @@ main (int argc, char *argv[])
 /***********************************************************
  * Log level and coommand line parsing                     *
  ***********************************************************/
-  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
-  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
-  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_WARN);
+  LogLevel logLevelLTE = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_ERROR);
+  LogLevel logLevelMobility = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_INFO);
+  LogLevel logLevelUDP = (LogLevel)(LOG_PREFIX_ALL | LOG_LEVEL_ERROR);
 
   LogComponentEnable ("LteHelper", logLevelLTE);
   LogComponentEnable ("EpcHelper", logLevelLTE);
@@ -232,6 +232,8 @@ main (int argc, char *argv[])
 
   m_ueHandoverStart.reserve(numUEs);
   m_enbHandoverStart.reserve(numUEs);
+
+  Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (320));
 
 /***********************************************************
  * Create LTE, EPC, and UE/eNB Nodes                       *
@@ -350,10 +352,10 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (cellSize*0.75),
-    "DeltaY", DoubleValue (cellSize*0.75),
+    "DeltaX", DoubleValue (cellSize*0.5),
+    "DeltaY", DoubleValue (cellSize*0.5),
     "GridWidth", UintegerValue (gridWidth),
-    "LayoutType", StringValue ("RowFirst"));
+    "LayoutType", StringValue ("ColumnFirst"));
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
