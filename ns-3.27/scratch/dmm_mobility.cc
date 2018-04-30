@@ -200,7 +200,6 @@ main (int argc, char *argv[])
   // arguments, so that the user is allowed to override these settings
   Config::SetDefault ("ns3::UdpClient::Interval", TimeValue (MilliSeconds (10)));
   Config::SetDefault ("ns3::UdpClient::MaxPackets", UintegerValue (1000000));
-  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (true));
 
   // Command line arguments
   CommandLine cmd;
@@ -218,6 +217,8 @@ main (int argc, char *argv[])
 
   bool x2Everywhere = false;
 
+  bool useIdealRrc = true; // disable animation if not ideal because of a strange bug
+
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 100)", simTime);
@@ -227,12 +228,14 @@ main (int argc, char *argv[])
   cmd.AddValue ("enbHeight", "Height of eNBs (default = 2)", enbHeight);
   cmd.AddValue ("gridWidth", "number of eNBs in X dimension", gridWidth);
   cmd.AddValue ("x2Everywhere", "Whether to add X2 interfaces between all eNBs (default = false)", x2Everywhere);
+  cmd.AddValue ("useIdealRrc", "Whether to use ideal LTE RRC, false disables animation (default = true)", useIdealRrc);
 
   cmd.Parse (argc, argv);
 
   m_ueHandoverStart.reserve(numUEs);
   m_enbHandoverStart.reserve(numUEs);
 
+  Config::SetDefault ("ns3::LteHelper::UseIdealRrc", BooleanValue (useIdealRrc));
   Config::SetDefault ("ns3::LteEnbRrc::SrsPeriodicity", UintegerValue (320));
 
 /***********************************************************
@@ -498,31 +501,34 @@ main (int argc, char *argv[])
       lteHelper->ActivateDedicatedEpsBearer (ueLteDevs.Get (u), bearer2, tft2);
     }
 
-  //An animation for the project
+
   AnimationInterface anim (animFile);
+  if (useIdealRrc == true) {
+    //An animation for the project
 
-  for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
-    {
-      anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
-      anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
-   }
-
-  for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
-    {
-      anim.UpdateNodeDescription (enbNodes.Get (i), "ENB");
-      anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
+    for (uint32_t i = 0; i < ueNodes.GetN (); ++i)
+      {
+        anim.UpdateNodeDescription (ueNodes.Get (i), "UE");
+        anim.UpdateNodeColor (ueNodes.Get (i), 255, 0, 0);
     }
 
-  anim.UpdateNodeDescription(remoteHost, "Server");
-  anim.UpdateNodeColor(remoteHost, 0, 0, 255);
+    for (uint32_t i = 0; i < enbNodes.GetN (); ++i)
+      {
+        anim.UpdateNodeDescription (enbNodes.Get (i), "ENB");
+        anim.UpdateNodeColor (enbNodes.Get (i), 0, 255, 0);
+      }
 
-  anim.EnablePacketMetadata ();
-  anim.SetMobilityPollInterval (Seconds (0.0001));
-  //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
-  //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
-  //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+    anim.UpdateNodeDescription(remoteHost, "Server");
+    anim.UpdateNodeColor(remoteHost, 0, 0, 255);
 
-  anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+    anim.EnablePacketMetadata ();
+    anim.SetMobilityPollInterval (Seconds (0.0001));
+    //anim.EnableIpv4RouteTracking (animFile, Seconds (0), Seconds (5), Seconds (0.25)); //Optional
+    //anim.EnableWifiMacCounters (Seconds (0), Seconds (10));
+    //anim.EnableWifiPhyCounters (Seconds (0), Seconds (10));
+
+    anim.EnableIpv4L3ProtocolCounters (Seconds (0), Seconds (10));
+  }
 
 /***********************************************************
  * Run simulation                                          *
