@@ -202,6 +202,8 @@ main (int argc, char *argv[])
   double enbHeight = 15;
   uint32_t gridWidth = 3;
 
+  bool x2Everywhere = false;
+
   cmd.AddValue ("speed", "Speed of the UE (default = 20 m/s)", speed);
   cmd.AddValue ("enbTxPowerDbm", "TX power [dBm] used by HeNBs (default = 25.0)", enbTxPowerDbm);
   cmd.AddValue ("simTime", "Total duration of the simulation (in seconds, default = 100)", simTime);
@@ -210,6 +212,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("numENBs", "Number of eNBs (default = 18)", numENBs);
   cmd.AddValue ("enbHeight", "Height of eNBs (default = 2)", enbHeight);
   cmd.AddValue ("gridWidth", "number of eNBs in X dimension", gridWidth);
+  cmd.AddValue ("x2Everywhere", "Whether to add X2 interfaces between all eNBs (default = false)", x2Everywhere);
 
   cmd.Parse (argc, argv);
 
@@ -354,23 +357,29 @@ main (int argc, char *argv[])
  * Add X2 interfaces to eNBs                               *
  ***********************************************************/
 //Based on the topology in the paper, we connect each enodebs in each network
-  lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
-  lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
+  if (x2Everywhere == true) { //
+    lteHelper->AddX2Interface(enbNodes);
+  } else if (numENBs != 18) {
+    NS_FATAL_ERROR("Invalid parameters: must have numENBs = 18 or x2Everywhere = true!");
+  } else { // correct number of eNBs and we don't want them all to have X2 interfaces
+    lteHelper->AddX2Interface(enbNodes.Get(0),  enbNodes.Get(1));
+    lteHelper->AddX2Interface(enbNodes.Get(1),  enbNodes.Get(2));
 
-  lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
-  lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
+    lteHelper->AddX2Interface(enbNodes.Get(3),  enbNodes.Get(4));
+    lteHelper->AddX2Interface(enbNodes.Get(4),  enbNodes.Get(5));
 
-  lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
-  lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
+    lteHelper->AddX2Interface(enbNodes.Get(6),  enbNodes.Get(7));
+    lteHelper->AddX2Interface(enbNodes.Get(7),  enbNodes.Get(8));
 
-  lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
-  lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
+    lteHelper->AddX2Interface(enbNodes.Get(9),  enbNodes.Get(10));
+    lteHelper->AddX2Interface(enbNodes.Get(10), enbNodes.Get(11));
 
-  lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
-  lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
+    lteHelper->AddX2Interface(enbNodes.Get(12), enbNodes.Get(13));
+    lteHelper->AddX2Interface(enbNodes.Get(13), enbNodes.Get(14));
 
-  lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
-  lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+    lteHelper->AddX2Interface(enbNodes.Get(15), enbNodes.Get(16));
+    lteHelper->AddX2Interface(enbNodes.Get(16), enbNodes.Get(17));
+  }
 
   lteHelper->SetEnbAntennaModelType ("ns3::IsotropicAntennaModel");
 //  lte.SetFadingModel("");
