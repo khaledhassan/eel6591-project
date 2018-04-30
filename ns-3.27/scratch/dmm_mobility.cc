@@ -352,10 +352,10 @@ main (int argc, char *argv[])
   ueMobility.SetPositionAllocator ("ns3::GridPositionAllocator",
     "MinX", DoubleValue (0.0),
     "MinY", DoubleValue (0.0),
-    "DeltaX", DoubleValue (cellSize*0.5),
-    "DeltaY", DoubleValue (cellSize*0.5),
+    "DeltaX", DoubleValue (cellSize*0.75),
+    "DeltaY", DoubleValue (cellSize*0.75),
     "GridWidth", UintegerValue (gridWidth),
-    "LayoutType", StringValue ("ColumnFirst"));
+    "LayoutType", StringValue ("RowFirst"));
   // ueMobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
