@@ -167,7 +167,7 @@ main (int argc, char *argv[])
   LogComponentEnable ("LteEnbNetDevice", logLevelLTE);
   LogComponentEnable ("LteUeRrc", logLevelLTE);
   LogComponentEnable ("LteUeNetDevice", logLevelLTE);
-  LogComponentEnable ("TraceFadingLossModel", logLevelLTE);
+  // LogComponentEnable ("TraceFadingLossModel", logLevelLTE);
 
   LogComponentEnable ("EpcX2", logLevelMobility);
   LogComponentEnable ("MobilityHelper", logLevelMobility);
@@ -335,9 +335,11 @@ main (int argc, char *argv[])
   //   "Time", TimeValue (Seconds (1.0)),
   //   "Mode", EnumValue (RandomWalk2dMobilityModel::MODE_TIME),
   //   "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
+  std::ostringstream speedString;
+  speedString << "ns3::ConstantRandomVariable[Constant=" << speed << "]";
   ueMobility.SetMobilityModel ("ns3::RandomDirection2dMobilityModel",
-                              "Bounds", RectangleValue (Rectangle (-cellSize, (numENBs/gridWidth)*cellSize, -cellSize, (gridWidth)*cellSize)), // TODO/XXX: parameterize GridWidth of eNBs, which is the 3 in this line
-                              "Speed", StringValue ("ns3::ConstantRandomVariable[Constant=100]"),
+                              "Bounds", RectangleValue (Rectangle (-cellSize, (numENBs/gridWidth)*cellSize, -cellSize, (gridWidth)*cellSize)),
+                              "Speed", StringValue (speedString.str()),
                               "Pause", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
   ueMobility.Install (ueNodes);
 
